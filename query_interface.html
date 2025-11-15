@@ -93,7 +93,7 @@
                 <input 
                     type="text" 
                     id="queryInput" 
-                    value="hope and light" 
+                    value="" 
                     placeholder="e.g., hope and light, prayer and strength, community garden"
                     class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition"
                     onkeypress="if(event.key === 'Enter') handleSearch()"
@@ -246,6 +246,21 @@
                 <p class="mt-1 text-xs text-gray-500 ml-6">Enrich results with relevant health information from the National Library of Medicine</p>
             </div>
 
+            <div class="mb-4">
+                <label class="flex items-center text-sm text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="includeSAMHSA" class="mr-2 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">
+                    <span>Include SAMHSA Mental Health Prevalence Data</span>
+                </label>
+                <p class="mt-1 text-xs text-gray-500 ml-6">Compare search results with official SAMHSA state-level mental health prevalence rates (NSDUH data)</p>
+                <div id="samhsaMetricSelect" class="mt-2 ml-6" style="display: none;">
+                    <label class="block text-xs text-gray-400 mb-1">SAMHSA Metric:</label>
+                    <select id="samhsaMetric" class="input-field w-full md:w-48 p-2 text-sm">
+                        <option value="SMI">Serious Mental Illness (SMI)</option>
+                        <option value="AMI">Any Mental Illness (AMI)</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="flex items-end">
                 <button 
                     id="searchButton" 
@@ -262,10 +277,123 @@
             Semantic Search Results 
             <span id="resultCount" class="ml-3 text-lg font-normal text-gray-400"></span>
         </h2>
-        <div id="results" class="card p-6 min-h-[200px] w-full">
+        
+        <!-- Geographic Heatmap for Search Results -->
+        <div id="search-results-heatmap" class="mb-6" style="display: none;">
+            <div class="card p-6">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">Geographic Distribution of Search Results</h3>
+                <p class="text-sm text-gray-400 mb-4">Heatmap showing where the matching experiences are located across the United States.</p>
+                <div id="search-heatmap-container" class="w-full" style="min-height: 500px;"></div>
+            </div>
+        </div>
+        
+        <div id="results" class="card p-6 min-h-[200px] w-full mb-12">
             <p class="text-gray-500 text-center">Click "Search Experiences" to view results.</p>
         </div>
+
+        <!-- Visualizations Section -->
+        <div class="mt-12 border-t border-gray-600 pt-8">
+            <h2 class="text-2xl font-bold text-gray-200 mb-6">📊 Data Visualizations</h2>
+            <p class="text-sm text-gray-400 mb-6">Generate interactive visualizations to analyze patterns, clusters, and correlations in client experiences.</p>
+            <div class="bg-blue-900 border border-blue-700 p-4 mb-6 rounded">
+                <p class="text-sm text-blue-200">
+                    <strong>Note:</strong> These visualizations are based on the current dataset in the database. 
+                    The accuracy and meaningfulness of the visualizations depend on the diversity and completeness of the data. 
+                    With the current sample size and limited policy metadata fields populated, some visualizations may show 
+                    limited variation. As more diverse data with complete policy metadata (service office locations, program 
+                    enrollments, varied stability measures) is added, the visualizations will become more informative and 
+                    actionable for policy analysis.
+                </p>
+            </div>
+            
+            <!-- t-SNE Clustering -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">1. Conceptual Vector Clustering (t-SNE)</h3>
+                <p class="text-sm text-gray-400 mb-4">Maps 512-dimensional vector space to 2D, showing conceptual relationships between experiences. Identifies clusters and outliers.</p>
+                <p class="text-xs text-gray-500 mb-4 italic">Note: This visualization works well with current data as it uses semantic vectors. Clustering quality improves with more diverse experiences.</p>
+                <button onclick="loadTSNEVisualization()" class="btn-primary px-4 py-2 mb-4">Generate Clustering Visualization</button>
+                <div id="tsne-container" class="w-full" style="min-height: 500px;"></div>
+            </div>
+
+            <!-- Geospatial Heatmap -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">2. Barrier Friction Map (Geospatial Analysis)</h3>
+                <p class="text-sm text-gray-400 mb-4">Shows geographic distribution of barriers by service office location and urban/rural designation.</p>
+                <p class="text-xs text-gray-500 mb-4 italic">Note: Requires populated service_office_location and diverse urban_rural_designation fields. Currently limited by sample data defaults.</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Filter by Issue Category:</label>
+                    <select id="geoTagFilter" class="input-field w-full md:w-64 p-2">
+                        <option value="">All Issues</option>
+                        <option value="Cognitive Load">Cognitive Load / Administrative Overwhelm</option>
+                        <option value="Dignity Deprivation">Dignity Deprivation / Stigma</option>
+                        <option value="Systemic Frustration">Systemic Frustration / Bureaucracy</option>
+                        <option value="Housing Insecurity">Housing Insecurity / Eviction Risk</option>
+                        <option value="Time Poverty">Time Poverty / Scheduling Barriers</option>
+                        <option value="Financial Stress">Financial Stress / Economic Hardship</option>
+                        <option value="Social Isolation">Social Isolation / Lack of Support</option>
+                        <option value="Healthcare Barrier">Healthcare Access Barriers</option>
+                        <option value="Community Support">Community Support / Social Capital</option>
+                    </select>
+                </div>
+                <button onclick="loadGeospatialVisualization()" class="btn-primary px-4 py-2 mb-4">Generate Geospatial Map</button>
+                <div id="geospatial-container" class="w-full"></div>
+            </div>
+
+            <!-- Geographic Map -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">3. Geographic Issue Heatmap (US Map)</h3>
+                <p class="text-sm text-gray-400 mb-4">Visualize where specific client experience issues are occurring across the United States. Shows state-level heatmap intensity based on issue frequency and severity.</p>
+                <p class="text-xs text-gray-500 mb-4 italic">Note: Requires populated city and state fields in the data. Currently limited by sample data defaults.</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Filter by Issue Category:</label>
+                    <select id="geoMapTagFilter" class="input-field w-full md:w-64 p-2">
+                        <option value="">All Issues</option>
+                        <option value="Cognitive Load">Cognitive Load / Administrative Overwhelm</option>
+                        <option value="Dignity Deprivation">Dignity Deprivation / Stigma</option>
+                        <option value="Systemic Frustration">Systemic Frustration / Bureaucracy</option>
+                        <option value="Housing Insecurity">Housing Insecurity / Eviction Risk</option>
+                        <option value="Time Poverty">Time Poverty / Scheduling Barriers</option>
+                        <option value="Financial Stress">Financial Stress / Economic Hardship</option>
+                        <option value="Social Isolation">Social Isolation / Lack of Support</option>
+                        <option value="Anxiety">Anxiety / Mental Health Stress</option>
+                        <option value="Healthcare Barrier">Healthcare Access Barriers</option>
+                        <option value="Community Support">Community Support / Social Capital</option>
+                    </select>
+                </div>
+                <button onclick="loadGeographicMap()" class="btn-primary px-4 py-2 mb-4">Generate Geographic Map</button>
+                <div id="geographic-map-container" class="w-full" style="min-height: 600px;"></div>
+            </div>
+
+            <!-- Correlation Plot -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-300 mb-4">4. Subjective vs. Objective Correlation Plot</h3>
+                <p class="text-sm text-gray-400 mb-4">Compare subjective ratings (anxiety, control, hope) against objective stability measures (residential moves, financial volatility).</p>
+                <p class="text-xs text-gray-500 mb-4 italic">Note: Requires varied values in both subjective and objective measures. Currently limited by sample data having mostly default values (e.g., all moves=0, limited anxiety variation).</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">X-Axis (Subjective):</label>
+                        <select id="corrXAxis" class="input-field w-full p-2">
+                            <option value="survey_anxiety">Survey Anxiety (1-5)</option>
+                            <option value="survey_control">Survey Control (1-5)</option>
+                            <option value="survey_hope">Survey Hope (1-5)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Y-Axis (Objective):</label>
+                        <select id="corrYAxis" class="input-field w-full p-2">
+                            <option value="residential_moves_count">Residential Moves (Last 12 Mos)</option>
+                            <option value="financial_volatility_index">Financial Volatility Index</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="loadCorrelationVisualization()" class="btn-primary px-4 py-2 mb-4">Generate Correlation Plot</button>
+                <div id="correlation-container" class="w-full" style="min-height: 500px;"></div>
+            </div>
+        </div>
     </div>
+
+    <!-- Plotly.js for visualizations -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 
     <script>
         // Check connection status on load
@@ -339,6 +467,9 @@
             try {
                 const includeNLM = document.getElementById('includeNLM').checked;
                 
+                const includeSAMHSA = document.getElementById('includeSAMHSA').checked;
+                const samhsaMetric = document.getElementById('samhsaMetric').value;
+                
                 const requestBody = {
                     query: queryText,
                     excludeQuery: excludeText,
@@ -354,6 +485,8 @@
                     filterMovesMin: filterMovesMin ? parseInt(filterMovesMin) : null,
                     filterMovesMax: filterMovesMax ? parseInt(filterMovesMax) : null,
                     includeNLM: includeNLM,
+                    includeSAMHSA: includeSAMHSA,
+                    samhsaMetric: samhsaMetric,
                     limit: 5
                 };
 
@@ -377,11 +510,20 @@
 
                 if (data.results && data.results.length > 0) {
                     displayResults(data.results);
+                    // Display geographic heatmap based on search results
+                    if (data.geographic_distribution && data.geographic_distribution.total_locations > 0) {
+                        displayGeographicHeatmap(data.geographic_distribution);
+                    }
                     document.getElementById('resultCount').textContent = 
                         `(${data.count} result${data.count !== 1 ? 's' : ''})`;
                 } else {
                     displayNoResults(data.query, data.filters_applied);
                     document.getElementById('resultCount').textContent = '(No results)';
+                    // Hide heatmap if no results
+                    const heatmapContainer = document.getElementById('search-results-heatmap');
+                    if (heatmapContainer) {
+                        heatmapContainer.style.display = 'none';
+                    }
                 }
                 
             } catch (error) {
@@ -559,6 +701,600 @@
                 resultsDiv.innerHTML += resultCard;
             });
         }
+
+        // Visualization Functions
+        async function loadTSNEVisualization() {
+            const container = document.getElementById('tsne-container');
+            container.innerHTML = '<p class="text-gray-400">Loading visualization...</p>';
+            
+            try {
+                const response = await fetch('/api/visualizations/tsne');
+                const data = await response.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<p class="text-red-400">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                // Group points by tag_abstract for color coding
+                const tagGroups = {};
+                data.points.forEach(point => {
+                    const tag = point.tag_abstract || 'Uncategorized';
+                    if (!tagGroups[tag]) {
+                        tagGroups[tag] = {x: [], y: [], text: [], ids: []};
+                    }
+                    tagGroups[tag].x.push(point.x);
+                    tagGroups[tag].y.push(point.y);
+                    tagGroups[tag].text.push(`${point.text_snippet}<br>Tag: ${point.tag_abstract}<br>Program: ${point.program}`);
+                    tagGroups[tag].ids.push(point.id);
+                });
+                
+                const traces = Object.keys(tagGroups).map(tag => ({
+                    x: tagGroups[tag].x,
+                    y: tagGroups[tag].y,
+                    text: tagGroups[tag].text,
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: tag,
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: {size: 8}
+                }));
+                
+                const layout = {
+                    title: 'Conceptual Vector Clustering (t-SNE)',
+                    xaxis: {title: 't-SNE Dimension 1'},
+                    yaxis: {title: 't-SNE Dimension 2'},
+                    hovermode: 'closest',
+                    plot_bgcolor: '#1a1a1a',
+                    paper_bgcolor: '#2d2d2d',
+                    font: {color: '#e5e5e5'},
+                    showlegend: true
+                };
+                
+                Plotly.newPlot('tsne-container', traces, layout, {responsive: true});
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400">Error loading visualization: ${error.message}</p>`;
+            }
+        }
+
+        async function loadGeospatialVisualization() {
+            const container = document.getElementById('geospatial-container');
+            container.innerHTML = '<p class="text-gray-400">Loading visualization...</p>';
+            
+            try {
+                const tagFilter = document.getElementById('geoTagFilter').value;
+                const url = `/api/visualizations/geospatial${tagFilter ? '?tag=' + encodeURIComponent(tagFilter) : ''}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<p class="text-red-400">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                // Create a table/chart of location data
+                let html = '<div class="overflow-x-auto"><table class="w-full text-sm text-gray-300"><thead><tr class="border-b border-gray-600"><th class="p-2 text-left">Location</th><th class="p-2 text-left">Count</th><th class="p-2 text-left">Urban/Rural</th><th class="p-2 text-left">Top Categories</th></tr></thead><tbody>';
+                
+                const locations = Object.entries(data.locations).sort((a, b) => b[1].count - a[1].count);
+                locations.forEach(([location, info]) => {
+                    const topTags = Object.entries(info.tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    html += `<tr class="border-b border-gray-700"><td class="p-2">${location}</td><td class="p-2">${info.count}</td><td class="p-2">${info.urban_rural}</td><td class="p-2">${topTags.map(([tag, count]) => `${tag} (${count})`).join(', ')}</td></tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                
+                // Add urban/rural breakdown
+                html += '<div class="mt-4"><h4 class="text-gray-300 font-semibold mb-2">Urban/Rural Breakdown:</h4><div class="flex gap-4">';
+                Object.entries(data.urban_rural_breakdown).forEach(([area, count]) => {
+                    const percentage = ((count / data.total_experiences) * 100).toFixed(1);
+                    html += `<div class="text-sm"><span class="text-gray-400">${area}:</span> <span class="text-blue-400 font-semibold">${count} (${percentage}%)</span></div>`;
+                });
+                html += '</div></div>';
+                
+                container.innerHTML = html;
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400">Error loading visualization: ${error.message}</p>`;
+            }
+        }
+
+        async function loadCorrelationVisualization() {
+            const container = document.getElementById('correlation-container');
+            container.innerHTML = '<p class="text-gray-400">Loading visualization...</p>';
+            
+            try {
+                const xAxis = document.getElementById('corrXAxis').value;
+                const yAxis = document.getElementById('corrYAxis').value;
+                const url = `/api/visualizations/correlation?x_axis=${encodeURIComponent(xAxis)}&y_axis=${encodeURIComponent(yAxis)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<p class="text-red-400">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                // Group by tag_abstract for color coding
+                const tagGroups = {};
+                data.points.forEach(point => {
+                    const tag = point.tag_abstract || 'Uncategorized';
+                    if (!tagGroups[tag]) {
+                        tagGroups[tag] = {x: [], y: [], text: []};
+                    }
+                    tagGroups[tag].x.push(point.x);
+                    tagGroups[tag].y.push(point.y);
+                    tagGroups[tag].text.push(`${point.text_snippet}<br>Tag: ${point.tag_abstract}<br>Program: ${point.program}`);
+                });
+                
+                const traces = Object.keys(tagGroups).map(tag => ({
+                    x: tagGroups[tag].x,
+                    y: tagGroups[tag].y,
+                    text: tagGroups[tag].text,
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: tag,
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: {size: 10}
+                }));
+                
+                const xLabel = data.x_axis.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const yLabel = data.y_axis.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                const layout = {
+                    title: `${xLabel} vs. ${yLabel}`,
+                    xaxis: {title: xLabel},
+                    yaxis: {title: yLabel},
+                    hovermode: 'closest',
+                    plot_bgcolor: '#1a1a1a',
+                    paper_bgcolor: '#2d2d2d',
+                    font: {color: '#e5e5e5'},
+                    showlegend: true
+                };
+                
+                Plotly.newPlot('correlation-container', traces, layout, {responsive: true});
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400">Error loading visualization: ${error.message}</p>`;
+            }
+        }
+
+        async function loadGeographicMap() {
+            const container = document.getElementById('geographic-map-container');
+            container.innerHTML = '<p class="text-gray-400">Loading geographic map...</p>';
+            
+            try {
+                const tagFilter = document.getElementById('geoMapTagFilter').value;
+                const url = `/api/visualizations/geographic${tagFilter ? '?tag=' + encodeURIComponent(tagFilter) : ''}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    container.innerHTML = `<p class="text-red-400">Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                if (data.locations_with_data === 0) {
+                    container.innerHTML = `
+                        <div class="bg-yellow-900 border border-yellow-700 p-6 text-center">
+                            <p class="text-yellow-200">No geographic data available.</p>
+                            <p class="text-yellow-300 text-sm mt-2">The current dataset does not have city/state information populated. Add city and state fields to your CSV data to enable this visualization.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Prepare data for Plotly scattergeo map
+                const locations = Object.values(data.locations);
+                const lats = [];
+                const lons = [];
+                const texts = [];
+                const sizes = [];
+                const colors = [];
+                
+                // State abbreviation mapping (for geocoding)
+                const stateAbbrev = {
+                    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+                    'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+                    'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+                    'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+                    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+                    'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+                    'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+                    'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+                    'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+                    'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
+                };
+                
+                // Aggregate by state with issue category scoring
+                const stateData = {};
+                Object.entries(data.state_counts).forEach(([state, stateInfo]) => {
+                    const stateKey = stateAbbrev[state] || state;
+                    stateData[stateKey] = {
+                        count: stateInfo.count || 0,
+                        cities: [],
+                        tags: stateInfo.tags || {},
+                        issue_scores: stateInfo.issue_scores || {},
+                        avg_anxiety: stateInfo.avg_anxiety,
+                        avg_control: stateInfo.avg_control,
+                        avg_hope: stateInfo.avg_hope
+                    };
+                });
+                
+                // Add city info from locations
+                Object.values(data.locations).forEach(loc => {
+                    const state = loc.state;
+                    const stateKey = stateAbbrev[state] || state;
+                    if (stateData[stateKey]) {
+                        if (!stateData[stateKey].cities.includes(loc.city)) {
+                            stateData[stateKey].cities.push(loc.city);
+                        }
+                    }
+                });
+                
+                const stateCodes = Object.keys(stateData);
+                
+                // Determine which issue to display based on filter or highest score
+                let displayIssue = tagFilter || '';
+                let stateValues, colorbarTitle, colorscale;
+                
+                if (displayIssue && stateCodes.length > 0) {
+                    // Show selected issue category
+                    stateValues = stateCodes.map(code => {
+                        return stateData[code].issue_scores[displayIssue] || 0;
+                    });
+                    colorbarTitle = `${displayIssue} Intensity Score`;
+                    colorscale = 'Reds';
+                } else {
+                    // Show total count or highest issue score
+                    const allIssues = data.issue_categories || [];
+                    if (allIssues.length > 0) {
+                        // Find the issue with highest average score across all states
+                        let maxAvgScore = 0;
+                        let topIssue = null;
+                        for (const issue of allIssues) {
+                            const avgScore = stateCodes.reduce((sum, code) => {
+                                return sum + (stateData[code].issue_scores[issue] || 0);
+                            }, 0) / stateCodes.length;
+                            if (avgScore > maxAvgScore) {
+                                maxAvgScore = avgScore;
+                                topIssue = issue;
+                            }
+                        }
+                        
+                        if (topIssue && maxAvgScore > 0) {
+                            displayIssue = topIssue;
+                            stateValues = stateCodes.map(code => {
+                                return stateData[code].issue_scores[topIssue] || 0;
+                            });
+                            colorbarTitle = `${topIssue} Intensity Score`;
+                            colorscale = 'Reds';
+                        } else {
+                            // Fallback to count
+                            stateValues = stateCodes.map(code => stateData[code].count);
+                            colorbarTitle = 'Number of Experiences';
+                            colorscale = 'Blues';
+                        }
+                    } else {
+                        // Fallback to count
+                        stateValues = stateCodes.map(code => stateData[code].count);
+                        colorbarTitle = 'Number of Experiences';
+                        colorscale = 'Blues';
+                    }
+                }
+                
+                const stateTexts = stateCodes.map(code => {
+                    const data = stateData[code];
+                    const topTags = Object.entries(data.tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    const topIssues = Object.entries(data.issue_scores)
+                        .filter(([_, score]) => score > 0)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3);
+                    
+                    let info = `${code}<br>Experiences: ${data.count}<br>Cities: ${data.cities.join(', ')}`;
+                    
+                    if (topIssues.length > 0) {
+                        info += `<br>Top Issues: ${topIssues.map(([issue, score]) => `${issue} (${score})`).join(', ')}`;
+                    } else if (topTags.length > 0) {
+                        info += `<br>Top Tags: ${topTags.map(([t, c]) => `${t} (${c})`).join(', ')}`;
+                    }
+                    
+                    if (data.avg_anxiety !== undefined && data.avg_anxiety !== null) {
+                        info += `<br>Avg Anxiety: ${data.avg_anxiety.toFixed(1)}/5`;
+                    }
+                    
+                    if (displayIssue && data.issue_scores[displayIssue] > 0) {
+                        info += `<br><strong>${displayIssue} Score: ${data.issue_scores[displayIssue]}</strong>`;
+                    }
+                    
+                    return info;
+                });
+                
+                const trace = {
+                    type: 'choropleth',
+                    locationmode: 'USA-states',
+                    locations: stateCodes,
+                    z: stateValues,
+                    text: stateTexts,
+                    colorscale: 'Reds',
+                    colorbar: {
+                        title: 'Number of Experiences',
+                        titlefont: {color: '#e5e5e5'},
+                        tickfont: {color: '#e5e5e5'}
+                    },
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: {
+                        line: {
+                            color: '#2d2d2d',
+                            width: 1
+                        }
+                    }
+                };
+                
+                const layout = {
+                    title: {
+                        text: displayIssue 
+                            ? `Geographic Distribution: ${displayIssue}`
+                            : 'Geographic Distribution of Client Experiences',
+                        font: {color: '#e5e5e5', size: 18}
+                    },
+                    geo: {
+                        scope: 'usa',
+                        bgcolor: '#1a1a1a',
+                        showlakes: true,
+                        lakecolor: '#2d2d2d',
+                        showland: true,
+                        landcolor: '#2d2d2d',
+                        showcoastlines: true,
+                        coastlinecolor: '#3a3a3a',
+                        projection: {
+                            type: 'albers usa'
+                        },
+                        lonaxis: {},
+                        lataxis: {}
+                    },
+                    paper_bgcolor: '#2d2d2d',
+                    plot_bgcolor: '#1a1a1a',
+                    font: {color: '#e5e5e5'}
+                };
+                
+                Plotly.newPlot('geographic-map-container', [trace], layout, {responsive: true});
+                
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400">Error loading geographic map: ${error.message}</p>`;
+            }
+        }
+
+        function displayGeographicHeatmap(geoData) {
+            const container = document.getElementById('search-results-heatmap');
+            const mapContainer = document.getElementById('search-heatmap-container');
+            
+            if (!geoData || geoData.total_locations === 0) {
+                if (container) container.style.display = 'none';
+                return;
+            }
+            
+            if (container) container.style.display = 'block';
+            if (mapContainer) mapContainer.innerHTML = '<p class="text-gray-400">Loading heatmap...</p>';
+            
+            try {
+                // State abbreviation mapping
+                const stateAbbrev = {
+                    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+                    'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+                    'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+                    'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+                    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+                    'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+                    'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+                    'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+                    'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+                    'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
+                };
+                
+                // Category display names
+                const categoryNames = {
+                    'depression': 'Depression/Hopelessness',
+                    'anxiety': 'Anxiety/Stress',
+                    'social_isolation': 'Social Isolation',
+                    'dignity_deprivation': 'Dignity Deprivation',
+                    'cognitive_load': 'Cognitive Load',
+                    'housing_insecurity': 'Housing Insecurity',
+                    'financial_stress': 'Financial Stress',
+                    'time_poverty': 'Time Poverty',
+                    'systemic_frustration': 'Systemic Frustration'
+                };
+                
+                // Determine which metric to display
+                let displayMetric = 'count';
+                let metricTitle = 'Number of Results';
+                let primaryCategory = null;
+                
+                // Check if we have primary categories from backend
+                if (geoData.primary_categories && geoData.primary_categories.length > 0) {
+                    primaryCategory = geoData.primary_categories[0];
+                    displayMetric = 'category';
+                    metricTitle = categoryNames[primaryCategory] || primaryCategory.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                }
+                // Check if we have survey anxiety data
+                else if (geoData.state_counts) {
+                    const statesWithAnxiety = Object.values(geoData.state_counts).filter(s => s.avg_anxiety !== undefined);
+                    if (statesWithAnxiety.length > 0) {
+                        displayMetric = 'anxiety';
+                        metricTitle = 'Average Anxiety Level (1-5)';
+                    }
+                }
+                
+                // Aggregate by state
+                const stateData = {};
+                Object.entries(geoData.state_counts).forEach(([state, data]) => {
+                    const stateKey = stateAbbrev[state] || state;
+                    stateData[stateKey] = {
+                        count: data.count || 0,
+                        cities: [],
+                        tags: {},
+                        category_scores: data.category_scores || {},
+                        avg_anxiety: data.avg_anxiety,
+                        avg_control: data.avg_control,
+                        avg_hope: data.avg_hope
+                    };
+                });
+                
+                // Add city info from locations
+                Object.values(geoData.locations).forEach(loc => {
+                    const state = loc.state;
+                    const stateKey = stateAbbrev[state] || state;
+                    if (stateData[stateKey]) {
+                        if (!stateData[stateKey].cities.includes(loc.city)) {
+                            stateData[stateKey].cities.push(loc.city);
+                        }
+                        Object.entries(loc.tags).forEach(([tag, count]) => {
+                            stateData[stateKey].tags[tag] = (stateData[stateKey].tags[tag] || 0) + count;
+                        });
+                    }
+                });
+                
+                const stateCodes = Object.keys(stateData);
+                
+                // Check if SAMHSA data is available
+                const hasSAMHSA = geoData.samhsa_data && geoData.samhsa_data.state_samhsa_data;
+                let showSAMHSA = false;
+                
+                // Determine values based on selected metric
+                let stateValues, colorbarTitle, colorscale;
+                if (hasSAMHSA && displayMetric !== 'anxiety') {
+                    // Show SAMHSA prevalence data when available
+                    showSAMHSA = true;
+                    stateValues = stateCodes.map(code => {
+                        return geoData.samhsa_data.state_samhsa_data[code] || 0;
+                    });
+                    const metricName = geoData.samhsa_data.metric_used === 'SMI' 
+                        ? 'Serious Mental Illness' 
+                        : 'Any Mental Illness';
+                    colorbarTitle = `SAMHSA ${metricName} Prevalence (%)`;
+                    colorscale = 'YlOrRd'; // Yellow-Orange-Red for prevalence
+                } else if (displayMetric === 'category' && primaryCategory) {
+                    stateValues = stateCodes.map(code => {
+                        const score = stateData[code].category_scores[primaryCategory] || 0;
+                        return score;
+                    });
+                    colorbarTitle = categoryNames[primaryCategory] || primaryCategory;
+                    colorscale = 'Reds';
+                } else if (displayMetric === 'anxiety') {
+                    stateValues = stateCodes.map(code => {
+                        return stateData[code].avg_anxiety || 0;
+                    });
+                    colorbarTitle = 'Average Anxiety (1-5)';
+                    colorscale = 'OrRd'; // Orange-Red for anxiety
+                } else {
+                    // Default to count
+                    stateValues = stateCodes.map(code => stateData[code].count);
+                    colorbarTitle = 'Number of Results';
+                    colorscale = 'Blues';
+                }
+                
+                const stateTexts = stateCodes.map(code => {
+                    const data = stateData[code];
+                    const topTags = Object.entries(data.tags).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    let info = `${code}<br>Experiences: ${data.count}<br>Cities: ${data.cities.join(', ')}`;
+                    
+                    if (topTags.length > 0) {
+                        info += `<br>Top Issues: ${topTags.map(([t, c]) => `${t} (${c})`).join(', ')}`;
+                    }
+                    
+                    if (data.avg_anxiety !== undefined) {
+                        info += `<br>Avg Anxiety: ${data.avg_anxiety.toFixed(1)}/5`;
+                    }
+                    
+                    if (primaryCategory && data.category_scores[primaryCategory]) {
+                        const catName = categoryNames[primaryCategory] || primaryCategory;
+                        info += `<br>${catName} Score: ${data.category_scores[primaryCategory]}`;
+                    }
+                    
+                    // Add SAMHSA data if available
+                    if (hasSAMHSA && geoData.samhsa_data.state_samhsa_data[code]) {
+                        const samhsaValue = geoData.samhsa_data.state_samhsa_data[code];
+                        const metricName = geoData.samhsa_data.metric_used === 'SMI' 
+                            ? 'SMI Prevalence' 
+                            : 'AMI Prevalence';
+                        info += `<br><strong>${metricName}: ${samhsaValue.toFixed(1)}%</strong>`;
+                        
+                        // Show correlation if available
+                        if (geoData.samhsa_data.comparison_data && geoData.samhsa_data.comparison_data[code]) {
+                            const comparison = geoData.samhsa_data.comparison_data[code];
+                            if (comparison.search_intensity > 0) {
+                                info += `<br>Search Intensity: ${comparison.search_intensity.toFixed(1)}`;
+                            }
+                        }
+                    }
+                    
+                    return info;
+                });
+                
+                const trace = {
+                    type: 'choropleth',
+                    locationmode: 'USA-states',
+                    locations: stateCodes,
+                    z: stateValues,
+                    text: stateTexts,
+                    colorscale: colorscale,
+                    colorbar: {
+                        title: colorbarTitle,
+                        titlefont: {color: '#e5e5e5'},
+                        tickfont: {color: '#e5e5e5'}
+                    },
+                    hovertemplate: '%{text}<extra></extra>',
+                    marker: {
+                        line: {
+                            color: '#2d2d2d',
+                            width: 1
+                        }
+                    }
+                };
+                
+                const layout = {
+                    title: {
+                        text: showSAMHSA 
+                            ? `SAMHSA ${geoData.samhsa_data.metric_used} Prevalence vs Search Results`
+                            : `Geographic Distribution: ${metricTitle}`,
+                        font: {color: '#e5e5e5', size: 16}
+                    },
+                    geo: {
+                        scope: 'usa',
+                        bgcolor: '#1a1a1a',
+                        showlakes: true,
+                        lakecolor: '#2d2d2d',
+                        showland: true,
+                        landcolor: '#2d2d2d',
+                        showcoastlines: true,
+                        coastlinecolor: '#3a3a3a',
+                        projection: {
+                            type: 'albers usa'
+                        }
+                    },
+                    paper_bgcolor: '#2d2d2d',
+                    plot_bgcolor: '#1a1a1a',
+                    font: {color: '#e5e5e5'},
+                    margin: {l: 0, r: 0, t: 40, b: 0}
+                };
+                
+                Plotly.newPlot('search-heatmap-container', [trace], layout, {responsive: true});
+                
+            } catch (error) {
+                if (mapContainer) {
+                    mapContainer.innerHTML = `<p class="text-red-400">Error displaying heatmap: ${error.message}</p>`;
+                }
+            }
+        }
+
+        // Toggle SAMHSA metric select visibility
+        document.addEventListener('DOMContentLoaded', function() {
+            const samhsaCheckbox = document.getElementById('includeSAMHSA');
+            const samhsaMetricSelect = document.getElementById('samhsaMetricSelect');
+            
+            if (samhsaCheckbox && samhsaMetricSelect) {
+                samhsaCheckbox.addEventListener('change', function() {
+                    samhsaMetricSelect.style.display = this.checked ? 'block' : 'none';
+                });
+            }
+        });
 
         // Initialize connection check on load
         window.onload = checkConnection;

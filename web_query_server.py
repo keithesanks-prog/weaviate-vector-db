@@ -19,6 +19,158 @@ except ImportError:
     NLM_AVAILABLE = False
     print("Warning: NLM integration module not available. Install requests: pip install requests")
 
+# Import visualization module
+try:
+    from visualizations import generate_tsne_visualization, generate_geospatial_heatmap, generate_correlation_plot, generate_geographic_map
+    VISUALIZATIONS_AVAILABLE = True
+except ImportError:
+    VISUALIZATIONS_AVAILABLE = False
+    print("Warning: Visualizations module not available.")
+
+# Import SAMHSA integration
+try:
+    from samhsa_integration import enrich_geographic_distribution_with_samhsa
+    SAMHSA_AVAILABLE = True
+except ImportError:
+    SAMHSA_AVAILABLE = False
+    print("Warning: SAMHSA integration module not available.")
+
+def generate_geographic_distribution(results):
+    """Generate geographic distribution from search results with category analysis"""
+    state_counts = {}
+    location_data = {}
+    category_keywords = {
+        'depression': ['depression', 'hopelessness', 'despair', 'suicidal', 'mental health', 'emotional exhaustion', 'no future'],
+        'anxiety': ['anxiety', 'worry', 'fear', 'panic', 'stress', 'overwhelmed', 'nervous'],
+        'social_isolation': ['isolation', 'alone', 'lonely', 'no support', 'isolated', 'social isolation', 'no one to talk'],
+        'dignity_deprivation': ['dignity', 'humiliation', 'shame', 'judgment', 'stigma', 'dehumanization', 'embarrassed'],
+        'cognitive_load': ['cognitive load', 'overwhelm', 'paperwork', 'administrative', 'complexity', 'confusion', 'buried'],
+        'housing_insecurity': ['housing', 'eviction', 'homeless', 'shelter', 'housing insecurity', 'move', 'landlord'],
+        'financial_stress': ['debt', 'money', 'financial', 'bills', 'poverty', 'economic', 'can\'t afford'],
+        'time_poverty': ['time poverty', 'no time', 'busy', 'rushed', 'waiting', 'time constraint', 'skip'],
+        'systemic_frustration': ['systemic', 'frustration', 'barrier', 'system', 'bureaucracy', 'red tape', 'government']
+    }
+    
+    # Analyze results to identify primary categories
+    category_scores = {}
+    for result in results:
+        metadata = result.get('metadata', {})
+        text = metadata.get('text_snippet', '').lower()
+        tag = metadata.get('subjective_concept', '').lower()
+        combined_text = f"{text} {tag}"
+        
+        # Score each category based on keyword matches
+        for category, keywords in category_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in combined_text)
+            if score > 0:
+                category_scores[category] = category_scores.get(category, 0) + score
+    
+    # Identify top categories (at least 2 matches)
+    top_categories = sorted(category_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+    top_categories = [cat for cat, score in top_categories if score >= 2]
+    
+    # If no strong category matches, use tag-based analysis
+    if not top_categories:
+        tag_counts = {}
+        for result in results:
+            tag = result.get('metadata', {}).get('subjective_concept', 'Uncategorized')
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        # Use most common tag as category
+        if tag_counts:
+            most_common_tag = max(tag_counts.items(), key=lambda x: x[1])[0]
+            top_categories = [most_common_tag.lower().replace(' ', '_').replace('/', '_')]
+    
+    # Aggregate by location with category-specific metrics
+    for result in results:
+        metadata = result.get('metadata', {})
+        city = metadata.get('city', '').strip()
+        state = metadata.get('state', '').strip()
+        tag = metadata.get('subjective_concept', 'Uncategorized')
+        text = metadata.get('text_snippet', '').lower()
+        combined_text = f"{text} {tag.lower()}"
+        
+        # Get survey metrics if available
+        anxiety = metadata.get('survey_anxiety')
+        control = metadata.get('survey_control')
+        hope = metadata.get('survey_hope')
+        
+        if not city or not state:
+            continue
+        
+        location_key = f"{city}, {state}"
+        
+        if location_key not in location_data:
+            location_data[location_key] = {
+                'city': city,
+                'state': state,
+                'count': 0,
+                'tags': {},
+                'category_scores': {cat: 0 for cat in category_keywords.keys()},
+                'anxiety_scores': [],
+                'control_scores': [],
+                'hope_scores': []
+            }
+        
+        location_data[location_key]['count'] += 1
+        
+        # Track tags
+        if tag not in location_data[location_key]['tags']:
+            location_data[location_key]['tags'][tag] = 0
+        location_data[location_key]['tags'][tag] += 1
+        
+        # Score categories for this location
+        for category, keywords in category_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in combined_text)
+            location_data[location_key]['category_scores'][category] += score
+        
+        # Track survey metrics
+        if anxiety is not None:
+            location_data[location_key]['anxiety_scores'].append(anxiety)
+        if control is not None:
+            location_data[location_key]['control_scores'].append(control)
+        if hope is not None:
+            location_data[location_key]['hope_scores'].append(hope)
+        
+        if state not in state_counts:
+            state_counts[state] = {
+                'count': 0,
+                'category_scores': {cat: 0 for cat in category_keywords.keys()},
+                'anxiety_scores': [],
+                'control_scores': [],
+                'hope_scores': []
+            }
+        
+        state_counts[state]['count'] += 1
+        
+        # Aggregate category scores at state level
+        for category, keywords in category_keywords.items():
+            score = sum(1 for keyword in keywords if keyword in combined_text)
+            state_counts[state]['category_scores'][category] += score
+        
+        if anxiety is not None:
+            state_counts[state]['anxiety_scores'].append(anxiety)
+        if control is not None:
+            state_counts[state]['control_scores'].append(control)
+        if hope is not None:
+            state_counts[state]['hope_scores'].append(hope)
+    
+    # Calculate averages for survey metrics
+    for state in state_counts:
+        if state_counts[state]['anxiety_scores']:
+            state_counts[state]['avg_anxiety'] = sum(state_counts[state]['anxiety_scores']) / len(state_counts[state]['anxiety_scores'])
+        if state_counts[state]['control_scores']:
+            state_counts[state]['avg_control'] = sum(state_counts[state]['control_scores']) / len(state_counts[state]['control_scores'])
+        if state_counts[state]['hope_scores']:
+            state_counts[state]['avg_hope'] = sum(state_counts[state]['hope_scores']) / len(state_counts[state]['hope_scores'])
+    
+    return {
+        'locations': location_data,
+        'state_counts': state_counts,
+        'total_locations': len(location_data),
+        'primary_categories': top_categories,
+        'category_keywords': category_keywords
+    }
+
 # Try to import CLIP for query vector generation
 try:
     from transformers import CLIPProcessor, CLIPModel
@@ -243,7 +395,8 @@ def search():
                         return_metadata=wvq.MetadataQuery(distance=True),
                         return_properties=["text", "tag_abstract", "ed_level_primary", 
                                          "religious_participation", "survey_anxiety", 
-                                         "survey_control", "survey_hope", "time_series_data"]
+                                         "survey_control", "survey_hope", "time_series_data",
+                                         "city", "state"]
                     )
                 else:
                     result = collection.query.near_vector(
@@ -252,7 +405,8 @@ def search():
                         return_metadata=wvq.MetadataQuery(distance=True),
                         return_properties=["text", "tag_abstract", "ed_level_primary",
                                          "religious_participation", "survey_anxiety",
-                                         "survey_control", "survey_hope", "time_series_data"]
+                                         "survey_control", "survey_hope", "time_series_data",
+                                         "city", "state"]
                     )
                 
                 # If Weaviate returns no results, use manual distance calculation
@@ -276,7 +430,7 @@ def search():
                                      "document_submission_success_rate", "service_office_location",
                                      "urban_rural_designation", "incident_time_of_day",
                                      "residential_moves_count", "financial_volatility_index",
-                                     "primary_language"]
+                                     "primary_language", "city", "state"]
                 )
                 
                 # Calculate cosine distances manually
@@ -420,8 +574,22 @@ def search():
         
         client.close()
         
+        # Generate geographic distribution from search results
+        geographic_data = generate_geographic_distribution(results)
+        
+        # Enrich with SAMHSA data if available
+        include_samhsa = request.json.get('includeSAMHSA', False) if request.json else False
+        if include_samhsa and SAMHSA_AVAILABLE:
+            samhsa_metric = request.json.get('samhsaMetric', 'SMI') if request.json else 'SMI'
+            geographic_data = enrich_geographic_distribution_with_samhsa(
+                geographic_data,
+                include_samhsa=True,
+                samhsa_metric=samhsa_metric
+            )
+        
         return jsonify({
             'results': results,
+            'geographic_distribution': geographic_data,
             'count': len(results),
             'query': query_text,
             'filters_applied': {
@@ -469,6 +637,67 @@ def enrich_experience(experience_id):
             'experience_id': experience_id,
             'enrichment': enrichment
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualizations/tsne', methods=['GET'])
+def get_tsne_visualization():
+    """Generate t-SNE clustering visualization data"""
+    if not VISUALIZATIONS_AVAILABLE:
+        return jsonify({'error': 'Visualizations not available'}), 503
+    
+    try:
+        client = connect_to_weaviate()
+        data = generate_tsne_visualization(client)
+        client.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualizations/geospatial', methods=['GET'])
+def get_geospatial_heatmap():
+    """Generate geospatial heatmap data"""
+    if not VISUALIZATIONS_AVAILABLE:
+        return jsonify({'error': 'Visualizations not available'}), 503
+    
+    try:
+        client = connect_to_weaviate()
+        tag_filter = request.args.get('tag', None)
+        query_text = request.args.get('query', None)
+        data = generate_geospatial_heatmap(client, query_text=query_text, tag_filter=tag_filter)
+        client.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualizations/geographic', methods=['GET'])
+def get_geographic_map():
+    """Generate geographic map visualization data"""
+    if not VISUALIZATIONS_AVAILABLE:
+        return jsonify({'error': 'Visualizations not available'}), 503
+    
+    try:
+        client = connect_to_weaviate()
+        tag_filter = request.args.get('tag', None)
+        data = generate_geographic_map(client, tag_filter=tag_filter)
+        client.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualizations/correlation', methods=['GET'])
+def get_correlation_plot():
+    """Generate correlation plot data"""
+    if not VISUALIZATIONS_AVAILABLE:
+        return jsonify({'error': 'Visualizations not available'}), 503
+    
+    try:
+        client = connect_to_weaviate()
+        x_axis = request.args.get('x_axis', 'survey_anxiety')
+        y_axis = request.args.get('y_axis', 'residential_moves_count')
+        data = generate_correlation_plot(client, x_axis=x_axis, y_axis=y_axis)
+        client.close()
+        return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

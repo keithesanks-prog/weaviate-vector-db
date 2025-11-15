@@ -127,7 +127,57 @@ Enrich client experiences with authoritative health information:
 - **Context-Aware Enrichment**: Uses text content, abstract tags, and survey data to identify relevant health resources
 - **Optional Feature**: Can be enabled/disabled per query to provide additional context without cluttering results
 
-#### 6. Modern Web-Based Query Interface
+#### 6. SAMHSA (Substance Abuse and Mental Health Services Administration) Integration
+Compare semantic search results with official mental health prevalence data:
+- **NSDUH Data Integration**: Access to National Survey on Drug Use and Health state-level prevalence rates
+- **Mental Health Metrics**: Serious Mental Illness (SMI) and Any Mental Illness (AMI) prevalence by state
+- **Correlation Analysis**: Compare platform's semantic search results with official SAMHSA data
+- **Policy Validation**: Validate that semantic search results align with known mental health prevalence patterns
+- **Optional Feature**: Can be enabled/disabled per query to overlay official data on search results
+- **Use Case**: Analysts can correlate high SMI rates with high scores on narratives tagged as "Systemic Frustration" or "Anxiety"
+
+#### 7. Data Visualizations
+Comprehensive visualization suite for policy analysis:
+
+**Geographic Issue Heatmap (US Map):**
+- State-level heatmap showing geographic distribution of specific client experience issues
+- **Issue Category Analysis**: Automatically detects and visualizes 10 concrete, measurable issue categories:
+  - Cognitive Load / Administrative Overwhelm
+  - Dignity Deprivation / Stigma
+  - Systemic Frustration / Bureaucracy
+  - Housing Insecurity / Eviction Risk
+  - Time Poverty / Scheduling Barriers
+  - Financial Stress / Economic Hardship
+  - Social Isolation / Lack of Support
+  - Anxiety / Mental Health Stress
+  - Healthcare Access Barriers
+  - Community Support / Social Capital
+- **Intensity Scoring**: Each state scored by issue category intensity based on keyword matching in narratives
+- **Filterable by Issue**: Select specific issue categories to see geographic patterns
+- **Auto-Detection**: Automatically displays the most prominent issue if no filter is selected
+- **Hover Details**: Shows top issues, cities, experience counts, and survey metrics per state
+
+**Search Results Geographic Heatmap:**
+- Integrated with semantic search results
+- Dynamically shows geographic distribution of current search query results
+- **Adaptive Display**: Automatically shows most relevant metric (issue category, anxiety levels, or result count)
+- **Category-Based Visualization**: When search results contain specific issues (depression, social isolation, etc.), heatmap displays that category's intensity by state
+- **SAMHSA Overlay**: When SAMHSA data is enabled, shows official mental health prevalence rates alongside search results
+
+**Conceptual Vector Clustering (t-SNE/UMAP):**
+- 2D visualization of 512-dimensional vector space
+- Identifies clusters of similar experiences and outliers
+- Color-coded by issue categories
+
+**Barrier Friction Map (Geospatial Analysis):**
+- Aggregates barriers by service office location and urban/rural designation
+- Identifies geographic patterns in systemic friction
+
+**Subjective vs. Objective Correlation Plot:**
+- Scatter plots comparing subjective ratings (anxiety, control, hope) against objective measures (residential moves, financial volatility)
+- Identifies resilient vs. vulnerable client populations
+
+#### 8. Modern Web-Based Query Interface
 User-friendly interface with professional design:
 - **Dark Theme**: Modern dark gray and blue color scheme
 - **Natural Language Query Input**: Simple text input for semantic search
@@ -140,6 +190,8 @@ User-friendly interface with professional design:
   - Similarity scores and match percentages
 - **Dynamic Container Sizing**: Results container automatically adjusts to content
 - **Real-time Search**: Instant results with loading states
+- **Geographic Heatmap Integration**: Search results automatically display geographic distribution heatmap
+- **SAMHSA Data Toggle**: Optional checkbox to include SAMHSA mental health prevalence data in visualizations
 
 ## Use Cases
 
@@ -175,22 +227,35 @@ The platform is designed with privacy and ethical considerations:
 - Semantic search with CLIP embeddings
 - Advanced multi-dimensional filtering with policy-driven metadata
 - **Policy-Driven Metadata Metrics**: Program enrollment, enrollment status, geographic context, stability measures
+- **Geographic Data**: City and state information for all entries (24 US states represented)
 - **Advanced Query Capabilities**: Negative filtering, range queries, query-time re-weighting
 - **NLM Integration**: MedlinePlus and PubMed health information enrichment
+- **SAMHSA Integration**: Mental health prevalence data correlation (SMI/AMI by state)
+- **Data Visualizations**: 
+  - Geographic Issue Heatmap with 10 concrete issue categories
+  - Search Results Geographic Heatmap (adaptive, category-based)
+  - Conceptual Vector Clustering (t-SNE/UMAP)
+  - Barrier Friction Map (geospatial analysis)
+  - Subjective vs. Objective Correlation Plots
 - Modern web-based query interface with dark theme
 - Conceptual distance analysis
 - Comprehensive documentation
 
 ### 📊 Current Dataset
-- 42 client experience entries
+- 41 client experience entries with comprehensive geographic data
+- **Geographic Coverage**: Entries span 24 US states with diverse city locations
 - Covers DHHS policy-relevant themes:
   - Administrative burden and cognitive load
   - Transportation and healthcare access barriers
   - Dignity deprivation and stigma
   - Housing insecurity as primary stressor
+  - Financial stress and economic hardship
+  - Social isolation and lack of support
+  - Time poverty and scheduling barriers
 - Includes deep psychological insights (intergenerational patterns, hope suppression, institutional violence)
 - Diverse demographic representation
 - Policy-relevant metadata for all entries (program enrollment, geographic context, stability measures)
+- **Concrete Issue Categories**: All entries classified using measurable, policy-actionable categories (removed abstract concepts like "Spiritual Resilience")
 
 ### 🔄 Future Enhancements
 - Real-time data ingestion from case management systems
@@ -226,6 +291,7 @@ python -B ingest_data.py
 - **STATUS.md**: Detailed project status and feature list
 - **SCHEMA_EXPLANATION.md**: Database schema and data model
 - **NLM_INTEGRATION_README.md**: NLM integration documentation and API usage
+- **ARCHITECTURE_DIAGRAM.md**: Mermaid diagrams of system architecture and data flow
 - **PROJECT_DESCRIPTION.md**: This document - comprehensive project overview
 
 ## Value Proposition

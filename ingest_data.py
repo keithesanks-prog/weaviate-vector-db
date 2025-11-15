@@ -509,6 +509,22 @@ def setup_weaviate_schema(client) -> None:
                 data_type=wvc.DataType.TEXT,
                 description="Primary language (English, Spanish, Other)"
             ),
+            # === Geographic Location for Mapping ===
+            wvc.Property(
+                name="city",
+                data_type=wvc.DataType.TEXT,
+                description="City name"
+            ),
+            wvc.Property(
+                name="state",
+                data_type=wvc.DataType.TEXT,
+                description="State name or abbreviation (e.g., 'California' or 'CA')"
+            ),
+            wvc.Property(
+                name="zip_code",
+                data_type=wvc.DataType.TEXT,
+                description="ZIP code (optional)"
+            ),
         ]
     )
     print(f"Schema created for class: {CLASS_NAME}")
@@ -603,6 +619,11 @@ def ingest_data(client, csv_path: str) -> int:
                 volatility_index = float(row.get('financial_volatility_index', 0.0)) if pd.notna(row.get('financial_volatility_index', 0.0)) else 0.0
                 primary_lang = str(row.get('primary_language', 'English')).strip() if pd.notna(row.get('primary_language', 'English')) else 'English'
                 
+                # Geographic location data
+                city = str(row.get('city', '')).strip() if pd.notna(row.get('city', '')) else ''
+                state = str(row.get('state', '')).strip() if pd.notna(row.get('state', '')) else ''
+                zip_code = str(row.get('zip_code', '')).strip() if pd.notna(row.get('zip_code', '')) else ''
+                
                 # Prepare data object
                 data_object = {
                     "text": text_snippet,
@@ -627,6 +648,10 @@ def ingest_data(client, csv_path: str) -> int:
                     "residential_moves_count": moves_count,
                     "financial_volatility_index": volatility_index,
                     "primary_language": primary_lang,
+                    # Geographic location
+                    "city": city,
+                    "state": state,
+                    "zip_code": zip_code,
                 }
                 
                 # Add survey ratings only if they exist
