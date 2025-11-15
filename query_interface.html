@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Services Experience Analytics - Query Interface</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for Inter font and general aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .result-card {
+            transition: all 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center py-6 mb-8 bg-white card rounded-2xl shadow-lg">
+            <h1 class="text-3xl font-extrabold text-indigo-800">Social Services Experience Analytics Platform</h1>
+            <p class="text-gray-600 mt-2">Semantic Search & Multi-Dimensional Filtering</p>
+            <div id="status" class="mt-4 text-sm">
+                <span id="connectionStatus" class="text-gray-500">Connecting to database...</span>
+                <span id="dataStatus" class="ml-4"></span>
+            </div>
+        </header>
+
+        <div class="bg-white card p-6 rounded-xl mb-10">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Query Builder</h2>
+            
+            <!-- Semantic Search Input -->
+            <div class="mb-6">
+                <label for="queryInput" class="block text-sm font-medium text-gray-700 mb-1">
+                    1. Abstract Concept Query (Semantic Search)
+                </label>
+                <input 
+                    type="text" 
+                    id="queryInput" 
+                    value="hope and light" 
+                    placeholder="e.g., hope and light, prayer and strength, community garden"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
+                    onkeypress="if(event.key === 'Enter') handleSearch()"
+                >
+                <div class="mt-2 text-sm text-gray-500">
+                    <strong>Example queries that work:</strong> 
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='hope and light'">hope and light</span> | 
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='prayer and strength'">prayer and strength</span> | 
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='community garden'">community garden</span> |
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='burnt plastic leaky pipe'">burnt plastic</span> |
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='homework candlelight'">homework candlelight</span> |
+                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='empty refrigerator'">empty refrigerator</span>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label for="filterReligiosity" class="block text-sm font-medium text-gray-700 mb-1">
+                        2. Filter by Religious Participation
+                    </label>
+                    <select id="filterReligiosity" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="High (Weekly)">High (Weekly)</option>
+                        <option value="Low (Monthly)">Low (Monthly)</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterAnxiety" class="block text-sm font-medium text-gray-700 mb-1">
+                        3. Filter by Anxiety Level (Survey)
+                    </label>
+                    <select id="filterAnxiety" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="high">High Anxiety (4-5)</option>
+                        <option value="low">Low Anxiety (1-2)</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button 
+                        id="searchButton" 
+                        onclick="handleSearch()" 
+                        class="w-full p-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
+                    >
+                        Search Experiences
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">
+            Semantic Search Results 
+            <span id="resultCount" class="ml-3 text-lg font-normal text-gray-500"></span>
+        </h2>
+        <div id="results" class="min-h-[200px] border border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center">
+            <p class="text-gray-500">Click "Search Experiences" to view results.</p>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status on load
+        async function checkConnection() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                if (data.connected) {
+                    document.getElementById('connectionStatus').textContent = 
+                        `✓ Connected`;
+                    document.getElementById('connectionStatus').className = 'text-green-600 font-semibold';
+                    
+                    if (data.has_data && data.total_objects > 0) {
+                        document.getElementById('dataStatus').textContent = 
+                            `| ${data.total_objects} experience${data.total_objects !== 1 ? 's' : ''} in database`;
+                        document.getElementById('dataStatus').className = 'text-green-600';
+                    } else {
+                        document.getElementById('dataStatus').textContent = 
+                            '| ⚠ No data found. Run: python -B ingest_data.py';
+                        document.getElementById('dataStatus').className = 'text-yellow-600 font-semibold';
+                    }
+                } else {
+                    document.getElementById('connectionStatus').textContent = 
+                        '⚠ Database connection issue';
+                    document.getElementById('connectionStatus').className = 'text-yellow-600';
+                    if (data.error) {
+                        document.getElementById('dataStatus').textContent = `| Error: ${data.error}`;
+                        document.getElementById('dataStatus').className = 'text-red-600';
+                    }
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').textContent = 
+                    '✗ Cannot connect to server. Make sure Flask server is running.';
+                document.getElementById('connectionStatus').className = 'text-red-600';
+                document.getElementById('dataStatus').textContent = '';
+            }
+        }
+
+        async function handleSearch() {
+            const queryText = document.getElementById('queryInput').value.trim();
+            const filterReligiosity = document.getElementById('filterReligiosity').value;
+            const filterAnxiety = document.getElementById('filterAnxiety').value;
+            
+            if (!queryText) {
+                document.getElementById('results').innerHTML = 
+                    '<div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">' +
+                    '<p class="text-red-600 font-semibold">Please enter a semantic search query.</p>' +
+                    '</div>';
+                return;
+            }
+
+            const searchButton = document.getElementById('searchButton');
+            const originalText = searchButton.innerHTML;
+            searchButton.innerHTML = 'Searching...';
+            searchButton.disabled = true;
+            searchButton.classList.add('opacity-75', 'cursor-not-allowed');
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: queryText,
+                        filterReligiosity: filterReligiosity,
+                        filterAnxiety: filterAnxiety,
+                        limit: 5
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                if (data.results && data.results.length > 0) {
+                    displayResults(data.results);
+                    document.getElementById('resultCount').textContent = 
+                        `(${data.count} result${data.count !== 1 ? 's' : ''})`;
+                } else {
+                    displayNoResults(data.query, data.filters_applied);
+                    document.getElementById('resultCount').textContent = '(No results)';
+                }
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">' +
+                    '<p class="text-red-600 font-semibold">Error performing search.</p>' +
+                    '<p class="text-red-500 text-sm mt-2">' + error.message + '</p>' +
+                    '</div>';
+                document.getElementById('resultCount').textContent = '';
+            } finally {
+                searchButton.innerHTML = originalText;
+                searchButton.disabled = false;
+                searchButton.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        }
+
+        function displayNoResults(query, filters) {
+            const resultsDiv = document.getElementById('results');
+            let filterInfo = '';
+            if (filters) {
+                const activeFilters = [];
+                if (filters.religiosity && filters.religiosity !== 'ALL') {
+                    activeFilters.push(`Religiosity: ${filters.religiosity}`);
+                }
+                if (filters.anxiety && filters.anxiety !== 'ALL') {
+                    activeFilters.push(`Anxiety: ${filters.anxiety}`);
+                }
+                if (activeFilters.length > 0) {
+                    filterInfo = '<p class="text-yellow-600 text-sm mt-2">Active filters: ' + activeFilters.join(', ') + '</p>';
+                }
+            }
+            
+            resultsDiv.innerHTML = 
+                '<div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-8 text-center">' +
+                '<p class="text-yellow-800 font-semibold text-lg mb-2">No experiences matched your query.</p>' +
+                '<p class="text-yellow-700 text-sm mb-4">Query: "' + query + '"</p>' +
+                filterInfo +
+                '<div class="mt-4 text-sm text-yellow-700">' +
+                '<p class="font-semibold mb-2">Suggestions:</p>' +
+                '<ul class="list-disc list-inside text-left max-w-md mx-auto space-y-1">' +
+                '<li>Try a broader query (e.g., "hope", "struggle", "community")</li>' +
+                '<li>Remove or adjust filters</li>' +
+                '<li>Check if data has been ingested: <code class="bg-yellow-100 px-2 py-1 rounded">python -B ingest_data.py</code></li>' +
+                '</ul>' +
+                '</div>' +
+                '</div>';
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            if (results.length === 0) {
+                displayNoResults('', {});
+                return;
+            }
+
+            results.forEach((match, index) => {
+                const metadata = match.metadata;
+                const scorePercent = ((match.score) * 100).toFixed(1);
+                const anxiety = metadata.survey_anxiety !== null && metadata.survey_anxiety !== undefined 
+                    ? `${metadata.survey_anxiety}/5` : 'N/A';
+                const control = metadata.survey_control !== null && metadata.survey_control !== undefined 
+                    ? `${metadata.survey_control}/5` : 'N/A';
+                const hope = metadata.survey_hope !== null && metadata.survey_hope !== undefined 
+                    ? `${metadata.survey_hope}/5` : 'N/A';
+                const volatility = metadata.time_series_volatility !== null && metadata.time_series_volatility !== undefined 
+                    ? `${metadata.time_series_volatility}/5` : 'N/A';
+
+                const resultCard = `
+                    <div class="result-card card bg-white p-5 rounded-xl border border-gray-200 mb-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-bold text-indigo-700">#${index + 1} - ${metadata.subjective_concept || 'N/A'}</h3>
+                            <span class="text-sm font-semibold text-green-600 bg-green-100 px-3 py-1 rounded-full">${scorePercent}% Match</span>
+                        </div>
+                        <p class="text-gray-700 italic mb-3 leading-relaxed">"${metadata.text_snippet || 'N/A'}"</p>
+                        <div class="flex flex-wrap justify-start text-sm text-gray-500 gap-4">
+                            <span><strong class="text-gray-800">Religiosity:</strong> ${metadata.religious_participation || 'N/A'}</span>
+                            <span><strong class="text-gray-800">Anxiety:</strong> ${anxiety}</span>
+                            <span><strong class="text-gray-800">Control:</strong> ${control}</span>
+                            <span><strong class="text-gray-800">Hope:</strong> ${hope}</span>
+                            ${volatility !== 'N/A' ? `<span><strong class="text-gray-800">Volatility:</strong> ${volatility}</span>` : ''}
+                            ${metadata.ed_level_primary ? `<span><strong class="text-gray-800">Education:</strong> ${metadata.ed_level_primary}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                resultsDiv.innerHTML += resultCard;
+            });
+        }
+
+        // Initialize connection check on load
+        window.onload = checkConnection;
+    </script>
+</body>
+</html>
