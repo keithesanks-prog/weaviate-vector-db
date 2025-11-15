@@ -10,40 +10,84 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for Inter font and general aesthetics */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
+            background-color: #1a1a1a;
+            color: #e5e5e5;
         }
         .card {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: #2d2d2d;
+            border: 1px solid #3a3a3a;
         }
         .result-card {
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            background-color: #2d2d2d;
+            border: 1px solid #3a3a3a;
+            width: 100%;
+            box-sizing: border-box;
         }
         .result-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+            background-color: #333333;
+        }
+        #results {
+            overflow-y: auto;
+            max-height: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #results.empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #results.has-content {
+            display: block;
+        }
+        #results > * {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .input-field {
+            background-color: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            color: #e5e5e5;
+        }
+        .input-field:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-primary:disabled {
+            background-color: #1e3a5f;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body class="p-8">
     <div class="max-w-4xl mx-auto">
-        <header class="text-center py-6 mb-8 bg-white card rounded-2xl shadow-lg">
-            <h1 class="text-3xl font-extrabold text-indigo-800">Social Services Experience Analytics Platform</h1>
-            <p class="text-gray-600 mt-2">Semantic Search & Multi-Dimensional Filtering</p>
+        <header class="text-center py-6 mb-8 card p-6">
+            <h1 class="text-3xl font-extrabold text-blue-400 mb-2">Social Services Experience Analytics Platform</h1>
+            <p class="text-gray-400 mt-2">Semantic Search & Multi-Dimensional Filtering</p>
             <div id="status" class="mt-4 text-sm">
-                <span id="connectionStatus" class="text-gray-500">Connecting to database...</span>
+                <span id="connectionStatus" class="text-gray-400">Connecting to database...</span>
                 <span id="dataStatus" class="ml-4"></span>
             </div>
         </header>
 
-        <div class="bg-white card p-6 rounded-xl mb-10">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Query Builder</h2>
+        <div class="card p-6 mb-10">
+            <h2 class="text-xl font-semibold text-gray-300 mb-4 border-b border-gray-600 pb-2">Query Builder</h2>
             
             <!-- Semantic Search Input -->
             <div class="mb-6">
-                <label for="queryInput" class="block text-sm font-medium text-gray-700 mb-1">
+                <label for="queryInput" class="block text-sm font-medium text-gray-300 mb-1">
                     1. Abstract Concept Query (Semantic Search)
                 </label>
                 <input 
@@ -51,27 +95,42 @@
                     id="queryInput" 
                     value="hope and light" 
                     placeholder="e.g., hope and light, prayer and strength, community garden"
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
+                    class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition"
                     onkeypress="if(event.key === 'Enter') handleSearch()"
                 >
-                <div class="mt-2 text-sm text-gray-500">
+                <div class="mt-2 text-sm text-gray-400">
                     <strong>Example queries that work:</strong> 
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='hope and light'">hope and light</span> | 
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='prayer and strength'">prayer and strength</span> | 
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='community garden'">community garden</span> |
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='burnt plastic leaky pipe'">burnt plastic</span> |
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='homework candlelight'">homework candlelight</span> |
-                    <span class="cursor-pointer text-indigo-600 hover:underline" onclick="document.getElementById('queryInput').value='empty refrigerator'">empty refrigerator</span>
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='hope and light'">hope and light</span> | 
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='prayer and strength'">prayer and strength</span> | 
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='community garden'">community garden</span> |
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='burnt plastic leaky pipe'">burnt plastic</span> |
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='homework candlelight'">homework candlelight</span> |
+                    <span class="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline" onclick="document.getElementById('queryInput').value='empty refrigerator'">empty refrigerator</span>
                 </div>
             </div>
 
+            <!-- Negative Filtering (Conceptual Exclusion) -->
+            <div class="mb-6">
+                <label for="excludeInput" class="block text-sm font-medium text-gray-300 mb-1">
+                    Exclude Concepts (Optional - Negative Filtering)
+                </label>
+                <input 
+                    type="text" 
+                    id="excludeInput" 
+                    value="" 
+                    placeholder="e.g., Instrumental Support, Spiritual Resilience"
+                    class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition"
+                >
+                <p class="mt-1 text-xs text-gray-500">Find experiences related to your query but exclude those matching this concept</p>
+            </div>
+
             <!-- Filter Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <label for="filterReligiosity" class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="filterReligiosity" class="block text-sm font-medium text-gray-300 mb-1">
                         2. Filter by Religious Participation
                     </label>
-                    <select id="filterReligiosity" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                    <select id="filterReligiosity" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
                         <option value="ALL">ALL (No Filter)</option>
                         <option value="High (Weekly)">High (Weekly)</option>
                         <option value="Low (Monthly)">Low (Monthly)</option>
@@ -79,34 +138,132 @@
                     </select>
                 </div>
                 <div>
-                    <label for="filterAnxiety" class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="filterAnxiety" class="block text-sm font-medium text-gray-300 mb-1">
                         3. Filter by Anxiety Level (Survey)
                     </label>
-                    <select id="filterAnxiety" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+                    <select id="filterAnxiety" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
                         <option value="ALL">ALL (No Filter)</option>
                         <option value="high">High Anxiety (4-5)</option>
                         <option value="low">Low Anxiety (1-2)</option>
                     </select>
                 </div>
-                <div class="flex items-end">
-                    <button 
-                        id="searchButton" 
-                        onclick="handleSearch()" 
-                        class="w-full p-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
-                    >
-                        Search Experiences
-                    </button>
+                <div>
+                    <label for="filterAnxietyMin" class="block text-sm font-medium text-gray-300 mb-1">
+                        Anxiety Range: Min (1-5)
+                    </label>
+                    <input type="number" id="filterAnxietyMin" min="1" max="5" placeholder="Min" 
+                           class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
                 </div>
+                <div>
+                    <label for="filterAnxietyMax" class="block text-sm font-medium text-gray-300 mb-1">
+                        Anxiety Range: Max (1-5)
+                    </label>
+                    <input type="number" id="filterAnxietyMax" min="1" max="5" placeholder="Max" 
+                           class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div>
+                    <label for="filterProgram" class="block text-sm font-medium text-gray-300 mb-1">
+                        Program Enrollment
+                    </label>
+                    <select id="filterProgram" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="SNAP">SNAP</option>
+                        <option value="Medicaid">Medicaid</option>
+                        <option value="TANF">TANF</option>
+                        <option value="WIC">WIC</option>
+                        <option value="Housing Voucher">Housing Voucher</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterEnrollmentStatus" class="block text-sm font-medium text-gray-300 mb-1">
+                        Enrollment Status Change (Last 6 Mos)
+                    </label>
+                    <select id="filterEnrollmentStatus" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="Enrolled">Enrolled</option>
+                        <option value="Denied">Denied</option>
+                        <option value="Re-applied">Re-applied</option>
+                        <option value="Disenrolled">Disenrolled</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterUrbanRural" class="block text-sm font-medium text-gray-300 mb-1">
+                        Geographic Designation
+                    </label>
+                    <select id="filterUrbanRural" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="Urban">Urban</option>
+                        <option value="Suburban">Suburban</option>
+                        <option value="Rural">Rural</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterTimeOfDay" class="block text-sm font-medium text-gray-300 mb-1">
+                        Time of Day
+                    </label>
+                    <select id="filterTimeOfDay" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="Morning">Morning</option>
+                        <option value="Afternoon">Afternoon</option>
+                        <option value="Evening">Evening</option>
+                        <option value="Night">Night</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterLanguage" class="block text-sm font-medium text-gray-300 mb-1">
+                        Primary Language
+                    </label>
+                    <select id="filterLanguage" class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                        <option value="ALL">ALL (No Filter)</option>
+                        <option value="English">English</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filterMovesMin" class="block text-sm font-medium text-gray-300 mb-1">
+                        Residential Moves: Min (Last 12 Mos)
+                    </label>
+                    <input type="number" id="filterMovesMin" min="0" placeholder="Min" 
+                           class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <div>
+                    <label for="filterMovesMax" class="block text-sm font-medium text-gray-300 mb-1">
+                        Residential Moves: Max (Last 12 Mos)
+                    </label>
+                    <input type="number" id="filterMovesMax" min="0" placeholder="Max" 
+                           class="input-field w-full p-3 focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="flex items-center text-sm text-gray-300 cursor-pointer">
+                    <input type="checkbox" id="includeNLM" class="mr-2 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">
+                    <span>Include NLM Health Information (MedlinePlus & PubMed)</span>
+                </label>
+                <p class="mt-1 text-xs text-gray-500 ml-6">Enrich results with relevant health information from the National Library of Medicine</p>
+            </div>
+
+            <div class="flex items-end">
+                <button 
+                    id="searchButton" 
+                    onclick="handleSearch()" 
+                    class="btn-primary w-full p-3 font-semibold transition shadow-md focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50"
+                >
+                    Search Experiences
+                </button>
             </div>
         </div>
 
         <!-- Results Display -->
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">
+        <h2 class="text-2xl font-bold text-gray-200 mb-6">
             Semantic Search Results 
-            <span id="resultCount" class="ml-3 text-lg font-normal text-gray-500"></span>
+            <span id="resultCount" class="ml-3 text-lg font-normal text-gray-400"></span>
         </h2>
-        <div id="results" class="min-h-[200px] border border-dashed border-gray-300 rounded-xl p-4 flex items-center justify-center">
-            <p class="text-gray-500">Click "Search Experiences" to view results.</p>
+        <div id="results" class="card p-6 min-h-[200px] w-full">
+            <p class="text-gray-500 text-center">Click "Search Experiences" to view results.</p>
         </div>
     </div>
 
@@ -119,43 +276,56 @@
                 if (data.connected) {
                     document.getElementById('connectionStatus').textContent = 
                         `✓ Connected`;
-                    document.getElementById('connectionStatus').className = 'text-green-600 font-semibold';
+                    document.getElementById('connectionStatus').className = 'text-green-400 font-semibold';
                     
                     if (data.has_data && data.total_objects > 0) {
                         document.getElementById('dataStatus').textContent = 
                             `| ${data.total_objects} experience${data.total_objects !== 1 ? 's' : ''} in database`;
-                        document.getElementById('dataStatus').className = 'text-green-600';
+                        document.getElementById('dataStatus').className = 'text-green-400';
                     } else {
                         document.getElementById('dataStatus').textContent = 
                             '| ⚠ No data found. Run: python -B ingest_data.py';
-                        document.getElementById('dataStatus').className = 'text-yellow-600 font-semibold';
+                        document.getElementById('dataStatus').className = 'text-yellow-400 font-semibold';
                     }
                 } else {
                     document.getElementById('connectionStatus').textContent = 
                         '⚠ Database connection issue';
-                    document.getElementById('connectionStatus').className = 'text-yellow-600';
+                    document.getElementById('connectionStatus').className = 'text-yellow-400';
                     if (data.error) {
                         document.getElementById('dataStatus').textContent = `| Error: ${data.error}`;
-                        document.getElementById('dataStatus').className = 'text-red-600';
+                        document.getElementById('dataStatus').className = 'text-red-400';
                     }
                 }
             } catch (error) {
                 document.getElementById('connectionStatus').textContent = 
                     '✗ Cannot connect to server. Make sure Flask server is running.';
-                document.getElementById('connectionStatus').className = 'text-red-600';
+                document.getElementById('connectionStatus').className = 'text-red-400';
                 document.getElementById('dataStatus').textContent = '';
             }
         }
 
         async function handleSearch() {
             const queryText = document.getElementById('queryInput').value.trim();
+            const excludeText = document.getElementById('excludeInput').value.trim();
             const filterReligiosity = document.getElementById('filterReligiosity').value;
             const filterAnxiety = document.getElementById('filterAnxiety').value;
+            const filterAnxietyMin = document.getElementById('filterAnxietyMin').value || null;
+            const filterAnxietyMax = document.getElementById('filterAnxietyMax').value || null;
+            const filterProgram = document.getElementById('filterProgram').value;
+            const filterEnrollmentStatus = document.getElementById('filterEnrollmentStatus').value;
+            const filterUrbanRural = document.getElementById('filterUrbanRural').value;
+            const filterTimeOfDay = document.getElementById('filterTimeOfDay').value;
+            const filterLanguage = document.getElementById('filterLanguage').value;
+            const filterMovesMin = document.getElementById('filterMovesMin').value || null;
+            const filterMovesMax = document.getElementById('filterMovesMax').value || null;
             
             if (!queryText) {
-                document.getElementById('results').innerHTML = 
-                    '<div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">' +
-                    '<p class="text-red-600 font-semibold">Please enter a semantic search query.</p>' +
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.classList.remove('has-content');
+                resultsDiv.classList.add('empty-state');
+                resultsDiv.innerHTML = 
+                    '<div class="bg-red-900 border border-red-700 p-6 text-center w-full">' +
+                    '<p class="text-red-200 font-semibold">Please enter a semantic search query.</p>' +
                     '</div>';
                 return;
             }
@@ -167,17 +337,32 @@
             searchButton.classList.add('opacity-75', 'cursor-not-allowed');
             
             try {
+                const includeNLM = document.getElementById('includeNLM').checked;
+                
+                const requestBody = {
+                    query: queryText,
+                    excludeQuery: excludeText,
+                    filterReligiosity: filterReligiosity,
+                    filterAnxiety: filterAnxiety,
+                    filterAnxietyMin: filterAnxietyMin ? parseInt(filterAnxietyMin) : null,
+                    filterAnxietyMax: filterAnxietyMax ? parseInt(filterAnxietyMax) : null,
+                    filterProgram: filterProgram,
+                    filterEnrollmentStatus: filterEnrollmentStatus,
+                    filterUrbanRural: filterUrbanRural,
+                    filterTimeOfDay: filterTimeOfDay,
+                    filterLanguage: filterLanguage,
+                    filterMovesMin: filterMovesMin ? parseInt(filterMovesMin) : null,
+                    filterMovesMax: filterMovesMax ? parseInt(filterMovesMax) : null,
+                    includeNLM: includeNLM,
+                    limit: 5
+                };
+
                 const response = await fetch('/api/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        query: queryText,
-                        filterReligiosity: filterReligiosity,
-                        filterAnxiety: filterAnxiety,
-                        limit: 5
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -201,10 +386,13 @@
                 
             } catch (error) {
                 console.error('Search error:', error);
-                document.getElementById('results').innerHTML = 
-                    '<div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">' +
-                    '<p class="text-red-600 font-semibold">Error performing search.</p>' +
-                    '<p class="text-red-500 text-sm mt-2">' + error.message + '</p>' +
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.classList.remove('has-content');
+                resultsDiv.classList.add('empty-state');
+                resultsDiv.innerHTML = 
+                    '<div class="bg-red-900 border border-red-700 p-6 text-center w-full">' +
+                    '<p class="text-red-200 font-semibold">Error performing search.</p>' +
+                    '<p class="text-red-300 text-sm mt-2">' + error.message + '</p>' +
                     '</div>';
                 document.getElementById('resultCount').textContent = '';
             } finally {
@@ -216,6 +404,9 @@
 
         function displayNoResults(query, filters) {
             const resultsDiv = document.getElementById('results');
+            resultsDiv.classList.remove('has-content');
+            resultsDiv.classList.add('empty-state');
+            
             let filterInfo = '';
             if (filters) {
                 const activeFilters = [];
@@ -226,21 +417,21 @@
                     activeFilters.push(`Anxiety: ${filters.anxiety}`);
                 }
                 if (activeFilters.length > 0) {
-                    filterInfo = '<p class="text-yellow-600 text-sm mt-2">Active filters: ' + activeFilters.join(', ') + '</p>';
+                    filterInfo = '<p class="text-yellow-300 text-sm mt-2">Active filters: ' + activeFilters.join(', ') + '</p>';
                 }
             }
             
             resultsDiv.innerHTML = 
-                '<div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-8 text-center">' +
-                '<p class="text-yellow-800 font-semibold text-lg mb-2">No experiences matched your query.</p>' +
-                '<p class="text-yellow-700 text-sm mb-4">Query: "' + query + '"</p>' +
+                '<div class="bg-yellow-900 border border-yellow-700 p-8 text-center w-full box-border">' +
+                '<p class="text-yellow-200 font-semibold text-lg mb-2">No experiences matched your query.</p>' +
+                '<p class="text-yellow-300 text-sm mb-4">Query: "' + query + '"</p>' +
                 filterInfo +
-                '<div class="mt-4 text-sm text-yellow-700">' +
+                '<div class="mt-4 text-sm text-yellow-300">' +
                 '<p class="font-semibold mb-2">Suggestions:</p>' +
                 '<ul class="list-disc list-inside text-left max-w-md mx-auto space-y-1">' +
                 '<li>Try a broader query (e.g., "hope", "struggle", "community")</li>' +
                 '<li>Remove or adjust filters</li>' +
-                '<li>Check if data has been ingested: <code class="bg-yellow-100 px-2 py-1 rounded">python -B ingest_data.py</code></li>' +
+                '<li>Check if data has been ingested: <code class="bg-yellow-800 px-2 py-1">python -B ingest_data.py</code></li>' +
                 '</ul>' +
                 '</div>' +
                 '</div>';
@@ -249,6 +440,8 @@
         function displayResults(results) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
+            resultsDiv.classList.remove('empty-state');
+            resultsDiv.classList.add('has-content');
             
             if (results.length === 0) {
                 displayNoResults('', {});
@@ -266,22 +459,101 @@
                     ? `${metadata.survey_hope}/5` : 'N/A';
                 const volatility = metadata.time_series_volatility !== null && metadata.time_series_volatility !== undefined 
                     ? `${metadata.time_series_volatility}/5` : 'N/A';
+                const program = metadata.current_program_enrollment || 'N/A';
+                const enrollmentStatus = metadata.enrollment_status_change || 'N/A';
+                const urbanRural = metadata.urban_rural_designation || 'N/A';
+                const timeOfDay = metadata.incident_time_of_day || 'N/A';
+                const language = metadata.primary_language || 'N/A';
+                const moves = metadata.residential_moves_count !== null && metadata.residential_moves_count !== undefined 
+                    ? metadata.residential_moves_count : 'N/A';
+                
+                // NLM Enrichment Section
+                let nlmSection = '';
+                if (metadata.nlm_enrichment) {
+                    const nlm = metadata.nlm_enrichment;
+                    nlmSection = `
+                        <div class="mt-4 pt-4 border-t border-gray-600">
+                            <h4 class="text-sm font-semibold text-blue-400 mb-2">📚 Health Information from National Library of Medicine</h4>
+                            ${nlm.health_keywords && nlm.health_keywords.length > 0 ? 
+                                `<p class="text-xs text-gray-400 mb-2"><strong>Health Topics:</strong> ${nlm.health_keywords.join(', ')}</p>` : ''}
+                            
+                            ${nlm.medlineplus_articles && nlm.medlineplus_articles.length > 0 ? `
+                                <div class="mb-3">
+                                    <p class="text-xs font-semibold text-gray-300 mb-1">MedlinePlus Articles:</p>
+                                    ${nlm.medlineplus_articles.map(article => `
+                                        <a href="${article.url}" target="_blank" 
+                                           class="block text-xs text-blue-400 hover:text-blue-300 hover:underline mb-1">
+                                            • ${article.title}
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            
+                            ${nlm.pubmed_articles && nlm.pubmed_articles.length > 0 ? `
+                                <div class="mb-3">
+                                    <p class="text-xs font-semibold text-gray-300 mb-1">Research Articles (PubMed):</p>
+                                    ${nlm.pubmed_articles.map(article => `
+                                        <a href="${article.url}" target="_blank" 
+                                           class="block text-xs text-blue-400 hover:text-blue-300 hover:underline mb-1">
+                                            • ${article.title}
+                                        </a>
+                                        ${article.authors ? `<span class="text-xs text-gray-500 ml-2">by ${article.authors}</span>` : ''}
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Create a title from the text snippet (first 80 characters or first sentence)
+                const textSnippet = metadata.text_snippet || 'N/A';
+                let resultTitle = textSnippet;
+                if (textSnippet.length > 80) {
+                    // Try to find the first sentence
+                    const firstSentence = textSnippet.match(/^[^.!?]+[.!?]/);
+                    if (firstSentence) {
+                        resultTitle = firstSentence[0].trim();
+                    } else {
+                        // Otherwise truncate at 80 chars with ellipsis
+                        resultTitle = textSnippet.substring(0, 77) + '...';
+                    }
+                }
+                
+                // Format the category tag (tag_abstract)
+                const categoryTag = metadata.subjective_concept || 'Uncategorized';
+                const categoryParts = categoryTag.split('/');
+                const primaryCategory = categoryParts[0];
+                const secondaryCategory = categoryParts.length > 1 ? categoryParts[1] : null;
 
                 const resultCard = `
-                    <div class="result-card card bg-white p-5 rounded-xl border border-gray-200 mb-4">
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="text-lg font-bold text-indigo-700">#${index + 1} - ${metadata.subjective_concept || 'N/A'}</h3>
-                            <span class="text-sm font-semibold text-green-600 bg-green-100 px-3 py-1 rounded-full">${scorePercent}% Match</span>
+                    <div class="result-card p-5 mb-4 box-border">
+                        <div class="flex items-start justify-between mb-3 pb-3 border-b border-gray-600">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-sm font-bold text-gray-400">#${index + 1}</span>
+                                    <span class="text-xs font-semibold text-blue-400 bg-blue-900 px-2 py-1">${primaryCategory}</span>
+                                    ${secondaryCategory ? `<span class="text-xs font-semibold text-blue-300 bg-blue-800 px-2 py-1">${secondaryCategory}</span>` : ''}
+                                </div>
+                                <h3 class="text-base font-semibold text-gray-200 leading-snug">${resultTitle}</h3>
+                            </div>
+                            <span class="text-xs font-semibold text-green-400 bg-green-900 px-2 py-1 ml-3 flex-shrink-0">${scorePercent}% Match</span>
                         </div>
-                        <p class="text-gray-700 italic mb-3 leading-relaxed">"${metadata.text_snippet || 'N/A'}"</p>
-                        <div class="flex flex-wrap justify-start text-sm text-gray-500 gap-4">
-                            <span><strong class="text-gray-800">Religiosity:</strong> ${metadata.religious_participation || 'N/A'}</span>
-                            <span><strong class="text-gray-800">Anxiety:</strong> ${anxiety}</span>
-                            <span><strong class="text-gray-800">Control:</strong> ${control}</span>
-                            <span><strong class="text-gray-800">Hope:</strong> ${hope}</span>
-                            ${volatility !== 'N/A' ? `<span><strong class="text-gray-800">Volatility:</strong> ${volatility}</span>` : ''}
-                            ${metadata.ed_level_primary ? `<span><strong class="text-gray-800">Education:</strong> ${metadata.ed_level_primary}</span>` : ''}
+                        <p class="text-gray-400 text-sm mb-3 leading-relaxed break-words pl-2 border-l-2 border-gray-600">"${textSnippet}"</p>
+                        <div class="flex flex-wrap justify-start text-sm text-gray-400 gap-4">
+                            <span><strong class="text-gray-300">Religiosity:</strong> ${metadata.religious_participation || 'N/A'}</span>
+                            <span><strong class="text-gray-300">Anxiety:</strong> ${anxiety}</span>
+                            <span><strong class="text-gray-300">Control:</strong> ${control}</span>
+                            <span><strong class="text-gray-300">Hope:</strong> ${hope}</span>
+                            ${volatility !== 'N/A' ? `<span><strong class="text-gray-300">Volatility:</strong> ${volatility}</span>` : ''}
+                            ${metadata.ed_level_primary ? `<span><strong class="text-gray-300">Education:</strong> ${metadata.ed_level_primary}</span>` : ''}
+                            ${program !== 'N/A' ? `<span><strong class="text-gray-300">Program:</strong> ${program}</span>` : ''}
+                            ${enrollmentStatus !== 'N/A' ? `<span><strong class="text-gray-300">Status:</strong> ${enrollmentStatus}</span>` : ''}
+                            ${urbanRural !== 'N/A' ? `<span><strong class="text-gray-300">Location:</strong> ${urbanRural}</span>` : ''}
+                            ${timeOfDay !== 'N/A' ? `<span><strong class="text-gray-300">Time:</strong> ${timeOfDay}</span>` : ''}
+                            ${language !== 'N/A' ? `<span><strong class="text-gray-300">Language:</strong> ${language}</span>` : ''}
+                            ${moves !== 'N/A' ? `<span><strong class="text-gray-300">Moves:</strong> ${moves}</span>` : ''}
                         </div>
+                        ${nlmSection}
                     </div>
                 `;
                 resultsDiv.innerHTML += resultCard;

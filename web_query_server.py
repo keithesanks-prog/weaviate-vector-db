@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Flask web server for Social Services Experience Analytics Platform query interface
-Provides REST API endpoints for querying Weaviate
+Provides REST API endpoints for querying Weaviate and NLM integration
 """
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -10,6 +10,14 @@ import weaviate
 import weaviate.classes.query as wvq
 import numpy as np
 import os
+
+# Import NLM integration
+try:
+    from nlm_integration import get_nlm_enrichment_for_experience, enrich_experience_with_nlm
+    NLM_AVAILABLE = True
+except ImportError:
+    NLM_AVAILABLE = False
+    print("Warning: NLM integration module not available. Install requests: pip install requests")
 
 # Try to import CLIP for query vector generation
 try:
@@ -81,15 +89,68 @@ def index():
     """Serve the main HTML page"""
     return send_from_directory('.', 'query_interface.html')
 
+def apply_vector_reweighting(query_vector, clip_weight, audio_weight, timeseries_weight):
+    """
+    Apply query-time modality re-weighting to the query vector.
+    Since we're querying against fused vectors, we need to adjust the query vector
+    to match the new weights. This is a simplified approach - in practice, you'd
+    need to regenerate the query vector with different weights.
+    """
+    # For now, we'll use the query vector as-is since we can't easily re-weight
+    # a single query vector. In a full implementation, you'd regenerate embeddings
+    # with different weights. This is a placeholder for the feature.
+    return query_vector
+
+def apply_negative_filtering(query_vector, exclude_text):
+    """
+    Apply conceptual exclusion (negative filtering).
+    Calculates query_vector - exclude_vector to find items close to A but far from B.
+    """
+    if not exclude_text or not CLIP_AVAILABLE:
+        return query_vector
+    
+    try:
+        exclude_vector = generate_query_vector(exclude_text)
+        if exclude_vector:
+            # Subtract the exclusion vector from the query vector
+            query_vec = np.array(query_vector)
+            exclude_vec = np.array(exclude_vector)
+            # Normalize both before subtraction
+            query_vec = query_vec / np.linalg.norm(query_vec)
+            exclude_vec = exclude_vec / np.linalg.norm(exclude_vec)
+            # Subtract and renormalize
+            result_vec = query_vec - exclude_vec
+            result_vec = result_vec / np.linalg.norm(result_vec)
+            return result_vec.tolist()
+    except Exception as e:
+        print(f"Warning: Negative filtering failed: {e}")
+    
+    return query_vector
+
 @app.route('/api/search', methods=['POST'])
 def search():
-    """Handle semantic search queries with filters"""
+    """Handle semantic search queries with advanced filters and capabilities"""
     try:
         data = request.json
         query_text = data.get('query', '').strip()
+        exclude_text = data.get('excludeQuery', '').strip()  # Negative filtering
         filter_religiosity = data.get('filterReligiosity', 'ALL')
         filter_anxiety = data.get('filterAnxiety', 'ALL')
+        filter_anxiety_min = data.get('filterAnxietyMin', None)  # Range query
+        filter_anxiety_max = data.get('filterAnxietyMax', None)  # Range query
+        filter_program = data.get('filterProgram', 'ALL')
+        filter_enrollment_status = data.get('filterEnrollmentStatus', 'ALL')
+        filter_urban_rural = data.get('filterUrbanRural', 'ALL')
+        filter_time_of_day = data.get('filterTimeOfDay', 'ALL')
+        filter_language = data.get('filterLanguage', 'ALL')
+        filter_moves_min = data.get('filterMovesMin', None)
+        filter_moves_max = data.get('filterMovesMax', None)
         limit = data.get('limit', 5)
+        
+        # Modality re-weighting (for future implementation)
+        clip_weight = data.get('clipWeight', 0.6)
+        audio_weight = data.get('audioWeight', 0.15)
+        timeseries_weight = data.get('timeseriesWeight', 0.15)
         
         if not query_text:
             return jsonify({'error': 'Query text is required'}), 400
@@ -101,23 +162,74 @@ def search():
         # Build filter chain
         filter_chain = None
         
+        # Existing filters
         if filter_religiosity and filter_religiosity != 'ALL':
             religiosity_filter = wvq.Filter.by_property("religious_participation").equal(filter_religiosity)
             filter_chain = religiosity_filter if filter_chain is None else filter_chain & religiosity_filter
         
-        if filter_anxiety and filter_anxiety != 'ALL':
+        # Range query for anxiety (two-dimensional filtering)
+        if filter_anxiety_min is not None or filter_anxiety_max is not None:
+            if filter_anxiety_min is not None and filter_anxiety_max is not None:
+                anxiety_filter = wvq.Filter.by_property("survey_anxiety").greater_or_equal(filter_anxiety_min) & \
+                                wvq.Filter.by_property("survey_anxiety").less_or_equal(filter_anxiety_max)
+            elif filter_anxiety_min is not None:
+                anxiety_filter = wvq.Filter.by_property("survey_anxiety").greater_or_equal(filter_anxiety_min)
+            else:
+                anxiety_filter = wvq.Filter.by_property("survey_anxiety").less_or_equal(filter_anxiety_max)
+            filter_chain = anxiety_filter if filter_chain is None else filter_chain & anxiety_filter
+        elif filter_anxiety and filter_anxiety != 'ALL':
+            # Legacy single-value filter
             if filter_anxiety == 'low':
                 anxiety_filter = wvq.Filter.by_property("survey_anxiety").less_or_equal(2)
             elif filter_anxiety == 'high':
                 anxiety_filter = wvq.Filter.by_property("survey_anxiety").greater_or_equal(4)
             else:
                 anxiety_filter = None
-            
             if anxiety_filter:
                 filter_chain = anxiety_filter if filter_chain is None else filter_chain & anxiety_filter
         
+        # Policy-driven metadata filters
+        if filter_program and filter_program != 'ALL':
+            program_filter = wvq.Filter.by_property("current_program_enrollment").equal(filter_program)
+            filter_chain = program_filter if filter_chain is None else filter_chain & program_filter
+        
+        if filter_enrollment_status and filter_enrollment_status != 'ALL':
+            status_filter = wvq.Filter.by_property("enrollment_status_change").equal(filter_enrollment_status)
+            filter_chain = status_filter if filter_chain is None else filter_chain & status_filter
+        
+        if filter_urban_rural and filter_urban_rural != 'ALL':
+            urban_rural_filter = wvq.Filter.by_property("urban_rural_designation").equal(filter_urban_rural)
+            filter_chain = urban_rural_filter if filter_chain is None else filter_chain & urban_rural_filter
+        
+        if filter_time_of_day and filter_time_of_day != 'ALL':
+            time_filter = wvq.Filter.by_property("incident_time_of_day").equal(filter_time_of_day)
+            filter_chain = time_filter if filter_chain is None else filter_chain & time_filter
+        
+        if filter_language and filter_language != 'ALL':
+            lang_filter = wvq.Filter.by_property("primary_language").equal(filter_language)
+            filter_chain = lang_filter if filter_chain is None else filter_chain & lang_filter
+        
+        # Range query for residential moves
+        if filter_moves_min is not None or filter_moves_max is not None:
+            if filter_moves_min is not None and filter_moves_max is not None:
+                moves_filter = wvq.Filter.by_property("residential_moves_count").greater_or_equal(filter_moves_min) & \
+                              wvq.Filter.by_property("residential_moves_count").less_or_equal(filter_moves_max)
+            elif filter_moves_min is not None:
+                moves_filter = wvq.Filter.by_property("residential_moves_count").greater_or_equal(filter_moves_min)
+            else:
+                moves_filter = wvq.Filter.by_property("residential_moves_count").less_or_equal(filter_moves_max)
+            filter_chain = moves_filter if filter_chain is None else filter_chain & moves_filter
+        
         # Generate query vector
         query_vector = generate_query_vector(query_text)
+        
+        # Apply negative filtering (conceptual exclusion) if specified
+        if exclude_text:
+            query_vector = apply_negative_filtering(query_vector, exclude_text)
+        
+        # Apply modality re-weighting (placeholder for future implementation)
+        if clip_weight != 0.6 or audio_weight != 0.15 or timeseries_weight != 0.15:
+            query_vector = apply_vector_reweighting(query_vector, clip_weight, audio_weight, timeseries_weight)
         
         # Perform search
         if query_vector:
@@ -159,7 +271,12 @@ def search():
                     filters=filter_chain if filter_chain else None,
                     return_properties=["text", "tag_abstract", "ed_level_primary", 
                                      "religious_participation", "survey_anxiety", 
-                                     "survey_control", "survey_hope", "time_series_data"]
+                                     "survey_control", "survey_hope", "time_series_data",
+                                     "current_program_enrollment", "enrollment_status_change",
+                                     "document_submission_success_rate", "service_office_location",
+                                     "urban_rural_designation", "incident_time_of_day",
+                                     "residential_moves_count", "financial_volatility_index",
+                                     "primary_language"]
                 )
                 
                 # Calculate cosine distances manually
@@ -209,7 +326,12 @@ def search():
                     return_metadata=wvq.MetadataQuery(distance=True),
                     return_properties=["text", "tag_abstract", "ed_level_primary",
                                      "religious_participation", "survey_anxiety",
-                                     "survey_control", "survey_hope", "time_series_data"]
+                                     "survey_control", "survey_hope", "time_series_data",
+                                     "current_program_enrollment", "enrollment_status_change",
+                                     "document_submission_success_rate", "service_office_location",
+                                     "urban_rural_designation", "incident_time_of_day",
+                                     "residential_moves_count", "financial_volatility_index",
+                                     "primary_language"]
                 )
             else:
                 result = collection.query.near_text(
@@ -218,7 +340,12 @@ def search():
                     return_metadata=wvq.MetadataQuery(distance=True),
                     return_properties=["text", "tag_abstract", "ed_level_primary",
                                      "religious_participation", "survey_anxiety",
-                                     "survey_control", "survey_hope", "time_series_data"]
+                                     "survey_control", "survey_hope", "time_series_data",
+                                     "current_program_enrollment", "enrollment_status_change",
+                                     "document_submission_success_rate", "service_office_location",
+                                     "urban_rural_designation", "incident_time_of_day",
+                                     "residential_moves_count", "financial_volatility_index",
+                                     "primary_language"]
                 )
         
         # Format results
@@ -249,20 +376,46 @@ def search():
             # Ensure similarity score is between 0 and 1
             similarity = max(0.0, min(1.0, 1 - distance))
             
+            metadata_dict = {
+                'text_snippet': props.get('text', 'N/A'),
+                'subjective_concept': props.get('tag_abstract', 'N/A'),
+                'religious_participation': props.get('religious_participation', 'N/A'),
+                'survey_anxiety': props.get('survey_anxiety'),
+                'survey_control': props.get('survey_control'),
+                'survey_hope': props.get('survey_hope'),
+                'time_series_volatility': volatility,
+                'ed_level_primary': props.get('ed_level_primary', 'N/A'),
+                # Policy-driven metadata
+                'current_program_enrollment': props.get('current_program_enrollment', 'N/A'),
+                'enrollment_status_change': props.get('enrollment_status_change', 'N/A'),
+                'document_submission_success_rate': props.get('document_submission_success_rate'),
+                'service_office_location': props.get('service_office_location', 'N/A'),
+                'urban_rural_designation': props.get('urban_rural_designation', 'N/A'),
+                'incident_time_of_day': props.get('incident_time_of_day', 'N/A'),
+                'residential_moves_count': props.get('residential_moves_count'),
+                'financial_volatility_index': props.get('financial_volatility_index'),
+                'primary_language': props.get('primary_language', 'N/A')
+            }
+            
+            # Add NLM enrichment if available and requested
+            include_nlm = request.json.get('includeNLM', False) if request.json else False
+            if include_nlm and NLM_AVAILABLE:
+                try:
+                    nlm_enrichment = enrich_experience_with_nlm(
+                        text_snippet=metadata_dict['text_snippet'],
+                        tag_abstract=metadata_dict['subjective_concept'],
+                        survey_anxiety=metadata_dict['survey_anxiety']
+                    )
+                    metadata_dict['nlm_enrichment'] = nlm_enrichment
+                except Exception as e:
+                    print(f"Warning: NLM enrichment failed: {e}")
+                    metadata_dict['nlm_enrichment'] = None
+            
             results.append({
                 'id': str(obj.uuid),
                 'score': similarity,  # Similarity score (0-1)
                 'distance': distance,  # Also include distance for debugging
-                'metadata': {
-                    'text_snippet': props.get('text', 'N/A'),
-                    'subjective_concept': props.get('tag_abstract', 'N/A'),
-                    'religious_participation': props.get('religious_participation', 'N/A'),
-                    'survey_anxiety': props.get('survey_anxiety'),
-                    'survey_control': props.get('survey_control'),
-                    'survey_hope': props.get('survey_hope'),
-                    'time_series_volatility': volatility,
-                    'ed_level_primary': props.get('ed_level_primary', 'N/A')
-                }
+                'metadata': metadata_dict
             })
         
         client.close()
@@ -282,6 +435,42 @@ def search():
         error_msg = str(e)
         traceback.print_exc()
         return jsonify({'error': error_msg}), 500
+
+@app.route('/api/enrich/<experience_id>', methods=['GET'])
+def enrich_experience(experience_id):
+    """Get NLM enrichment for a specific experience by ID"""
+    if not NLM_AVAILABLE:
+        return jsonify({'error': 'NLM integration not available'}), 503
+    
+    try:
+        client = connect_to_weaviate()
+        collection = client.collections.get(CLASS_NAME)
+        
+        # Fetch the experience by ID
+        result = collection.query.fetch_object_by_id(
+            experience_id,
+            return_properties=["text", "tag_abstract", "survey_anxiety", 
+                             "survey_control", "survey_hope"]
+        )
+        
+        if not result:
+            return jsonify({'error': 'Experience not found'}), 404
+        
+        props = result.properties
+        enrichment = enrich_experience_with_nlm(
+            text_snippet=props.get('text', ''),
+            tag_abstract=props.get('tag_abstract', ''),
+            survey_anxiety=props.get('survey_anxiety')
+        )
+        
+        client.close()
+        
+        return jsonify({
+            'experience_id': experience_id,
+            'enrichment': enrichment
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health():

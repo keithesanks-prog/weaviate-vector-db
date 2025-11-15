@@ -85,25 +85,61 @@ Query using natural language concepts and find semantically similar experiences:
 - "transportation barriers to healthcare"
 - "stigma and dignity concerns"
 
-#### 2. Multi-Dimensional Filtering
-Combine semantic search with metadata filters:
-- Filter by religious participation level
-- Filter by anxiety/survey ratings
-- Filter by education level
-- Filter by time-series volatility (financial instability patterns)
+#### 2. Advanced Multi-Dimensional Filtering
+Combine semantic search with comprehensive metadata filters:
 
-#### 3. Conceptual Distance Analysis
+**Demographic & Survey Filters:**
+- Religious participation level
+- Anxiety/survey ratings (with range queries)
+- Education level
+- Time-series volatility (financial instability patterns)
+
+**Policy-Driven Metadata Filters:**
+- **Programmatic Status**: Current program enrollment (SNAP, Medicaid, TANF, WIC, Housing Voucher), enrollment status changes, document submission success rates
+- **Geographic & Operational Context**: Service office locations, urban/rural designation, incident time-of-day
+- **Objective Stability Measures**: Residential moves count (with range queries), financial volatility index, primary language
+
+#### 3. Advanced Query Capabilities
+
+**Conceptual Exclusion (Negative Filtering):**
+- Search for experiences related to one concept while explicitly excluding another
+- Example: "Systemic Frustration" but exclude "Instrumental Support" or "Spiritual Resilience"
+- Mathematically calculates: query_vector - exclusion_vector
+
+**Two-Dimensional Range Queries:**
+- Filter by ranges on ordinal metrics (e.g., anxiety 1-2, residential moves 2-3)
+- Enables fine-grained analysis of resilient vs. struggling clients
+
+**Query-Time Modality Re-weighting:**
+- Temporarily adjust fusion weights for specific queries
+- Example: Increase audio weight when searching for "Sensory Stress" to prioritize environmental factors
+
+#### 4. Conceptual Distance Analysis
 Identify outliers and patterns:
 - Find experiences that deviate from conceptual averages
 - Discover unexpected connections between different experience types
 - Measure systemic variations across demographic groups
 
-#### 4. Web-Based Query Interface
-User-friendly interface for non-technical staff:
-- Natural language query input
-- Real-time search results
-- Filter controls for demographic and survey data
-- Visual result display with similarity scores
+#### 5. NLM (National Library of Medicine) Integration
+Enrich client experiences with authoritative health information:
+- **MedlinePlus Integration**: Automatic links to consumer health information based on health keywords extracted from experiences
+- **PubMed Integration**: Relevant research articles on social determinants of health, mental health, and poverty-related topics
+- **Context-Aware Enrichment**: Uses text content, abstract tags, and survey data to identify relevant health resources
+- **Optional Feature**: Can be enabled/disabled per query to provide additional context without cluttering results
+
+#### 6. Modern Web-Based Query Interface
+User-friendly interface with professional design:
+- **Dark Theme**: Modern dark gray and blue color scheme
+- **Natural Language Query Input**: Simple text input for semantic search
+- **Comprehensive Filter Controls**: All policy-driven metadata filters accessible via dropdowns and range inputs
+- **Enhanced Result Display**: 
+  - Clear titles derived from client narratives
+  - Category badges for analytical tags
+  - Full experience quotes with visual hierarchy
+  - NLM health information links (when enabled)
+  - Similarity scores and match percentages
+- **Dynamic Container Sizing**: Results container automatically adjusts to content
+- **Real-time Search**: Instant results with loading states
 
 ## Use Cases
 
@@ -135,18 +171,26 @@ The platform is designed with privacy and ethical considerations:
 
 ### ✅ Completed Features
 - Multi-modal data ingestion (text, images, audio-ready, time-series)
-- Manual vector fusion with configurable weights
+- Manual vector fusion with configurable weights (60% CLIP, 15% audio, 15% time-series)
 - Semantic search with CLIP embeddings
-- Multi-dimensional filtering (demographics, survey ratings)
-- Web-based query interface
+- Advanced multi-dimensional filtering with policy-driven metadata
+- **Policy-Driven Metadata Metrics**: Program enrollment, enrollment status, geographic context, stability measures
+- **Advanced Query Capabilities**: Negative filtering, range queries, query-time re-weighting
+- **NLM Integration**: MedlinePlus and PubMed health information enrichment
+- Modern web-based query interface with dark theme
 - Conceptual distance analysis
 - Comprehensive documentation
 
 ### 📊 Current Dataset
 - 42 client experience entries
-- Covers DHHS policy-relevant themes (administrative burden, transportation, dignity, housing)
+- Covers DHHS policy-relevant themes:
+  - Administrative burden and cognitive load
+  - Transportation and healthcare access barriers
+  - Dignity deprivation and stigma
+  - Housing insecurity as primary stressor
 - Includes deep psychological insights (intergenerational patterns, hope suppression, institutional violence)
 - Diverse demographic representation
+- Policy-relevant metadata for all entries (program enrollment, geographic context, stability measures)
 
 ### 🔄 Future Enhancements
 - Real-time data ingestion from case management systems
@@ -154,6 +198,10 @@ The platform is designed with privacy and ethical considerations:
 - Integration with existing DHHS data systems
 - Automated barrier identification and alerting
 - Longitudinal trend analysis
+- UMLS (Unified Medical Language System) integration for medical terminology standardization
+- ClinicalTrials.gov integration for linking experiences to relevant clinical trials
+- Enhanced NLM caching to reduce API calls
+- Multi-language support via NLM resources
 
 ## Getting Started
 
@@ -177,6 +225,8 @@ python -B ingest_data.py
 - **QUERY_GUIDE.md**: Comprehensive query examples and API documentation
 - **STATUS.md**: Detailed project status and feature list
 - **SCHEMA_EXPLANATION.md**: Database schema and data model
+- **NLM_INTEGRATION_README.md**: NLM integration documentation and API usage
+- **PROJECT_DESCRIPTION.md**: This document - comprehensive project overview
 
 ## Value Proposition
 

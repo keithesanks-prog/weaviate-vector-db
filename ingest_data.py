@@ -461,6 +461,54 @@ def setup_weaviate_schema(client) -> None:
                 data_type=wvc.DataType.INT,
                 description="Self-reported level of hope (1-5 scale)"
             ),
+            # === Policy-Driven Metadata: Programmatic Status ===
+            wvc.Property(
+                name="current_program_enrollment",
+                data_type=wvc.DataType.TEXT,
+                description="Current program enrollment (SNAP, Medicaid, TANF, WIC, Housing Voucher, None)"
+            ),
+            wvc.Property(
+                name="enrollment_status_change",
+                data_type=wvc.DataType.TEXT,
+                description="Enrollment status change in last 6 months (Enrolled, Denied, Re-applied, Disenrolled, None)"
+            ),
+            wvc.Property(
+                name="document_submission_success_rate",
+                data_type=wvc.DataType.INT,
+                description="Perceived difficulty with documentation (1-5 scale, 1=very difficult, 5=very easy)"
+            ),
+            # === Policy-Driven Metadata: Geographic and Operational Context ===
+            wvc.Property(
+                name="service_office_location",
+                data_type=wvc.DataType.TEXT,
+                description="Service office/location ID or name"
+            ),
+            wvc.Property(
+                name="urban_rural_designation",
+                data_type=wvc.DataType.TEXT,
+                description="Geographic designation (Urban, Suburban, Rural)"
+            ),
+            wvc.Property(
+                name="incident_time_of_day",
+                data_type=wvc.DataType.TEXT,
+                description="Time of day when experience occurred (Morning, Afternoon, Evening, Night)"
+            ),
+            # === Policy-Driven Metadata: Objective Stability Measures ===
+            wvc.Property(
+                name="residential_moves_count",
+                data_type=wvc.DataType.INT,
+                description="Number of residential moves in last 12 months (0, 1, 2, 3+)"
+            ),
+            wvc.Property(
+                name="financial_volatility_index",
+                data_type=wvc.DataType.NUMBER,
+                description="Financial volatility index (standard deviation of income, continuous value)"
+            ),
+            wvc.Property(
+                name="primary_language",
+                data_type=wvc.DataType.TEXT,
+                description="Primary language (English, Spanish, Other)"
+            ),
         ]
     )
     print(f"Schema created for class: {CLASS_NAME}")
@@ -483,14 +531,20 @@ def ingest_data(client, csv_path: str) -> int:
     total_records = len(df)
     print(f"Loaded {total_records} records from {csv_path}")
     
-    # Verify we have the expected columns
-    expected_cols = ['image_path', 'text_snippet', 'tag_abstract', 'ed_level_primary', 
-                     'religious_participation', 'audio_path', 'time_series_data',
+    # Verify we have the expected columns (core required columns)
+    required_cols = ['image_path', 'text_snippet', 'tag_abstract', 'ed_level_primary', 
+                     'religious_participation', 'time_series_data',
                      'survey_anxiety', 'survey_control', 'survey_hope']
-    missing_cols = [col for col in expected_cols if col not in df.columns]
+    missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        print(f"Warning: Missing columns: {missing_cols}")
+        print(f"Warning: Missing required columns: {missing_cols}")
         print(f"Available columns: {list(df.columns)}")
+    
+    # Optional policy-driven metadata columns (will use defaults if missing)
+    optional_cols = ['audio_path', 'current_program_enrollment', 'enrollment_status_change',
+                     'document_submission_success_rate', 'service_office_location',
+                     'urban_rural_designation', 'incident_time_of_day',
+                     'residential_moves_count', 'financial_volatility_index', 'primary_language']
     
     # Get collection
     collection = client.collections.get(CLASS_NAME)
@@ -538,6 +592,17 @@ def ingest_data(client, csv_path: str) -> int:
                 survey_control = int(row.get('survey_control', 0)) if pd.notna(row.get('survey_control', 0)) else None
                 survey_hope = int(row.get('survey_hope', 0)) if pd.notna(row.get('survey_hope', 0)) else None
                 
+                # Get policy-driven metadata (with defaults)
+                current_program = str(row.get('current_program_enrollment', 'None')).strip() if pd.notna(row.get('current_program_enrollment', 'None')) else 'None'
+                enrollment_status = str(row.get('enrollment_status_change', 'None')).strip() if pd.notna(row.get('enrollment_status_change', 'None')) else 'None'
+                doc_success = int(row.get('document_submission_success_rate', 3)) if pd.notna(row.get('document_submission_success_rate', 3)) else 3
+                service_office = str(row.get('service_office_location', '')).strip() if pd.notna(row.get('service_office_location', '')) else ''
+                urban_rural = str(row.get('urban_rural_designation', 'Urban')).strip() if pd.notna(row.get('urban_rural_designation', 'Urban')) else 'Urban'
+                time_of_day = str(row.get('incident_time_of_day', 'Afternoon')).strip() if pd.notna(row.get('incident_time_of_day', 'Afternoon')) else 'Afternoon'
+                moves_count = int(row.get('residential_moves_count', 0)) if pd.notna(row.get('residential_moves_count', 0)) else 0
+                volatility_index = float(row.get('financial_volatility_index', 0.0)) if pd.notna(row.get('financial_volatility_index', 0.0)) else 0.0
+                primary_lang = str(row.get('primary_language', 'English')).strip() if pd.notna(row.get('primary_language', 'English')) else 'English'
+                
                 # Prepare data object
                 data_object = {
                     "text": text_snippet,
@@ -550,6 +615,18 @@ def ingest_data(client, csv_path: str) -> int:
                     "audio_vector": audio_vector,
                     "time_series_data": time_series_data if time_series_data else "",
                     "time_series_vector": time_series_vector,
+                    # Policy-driven metadata: Programmatic Status
+                    "current_program_enrollment": current_program,
+                    "enrollment_status_change": enrollment_status,
+                    "document_submission_success_rate": doc_success,
+                    # Policy-driven metadata: Geographic and Operational Context
+                    "service_office_location": service_office,
+                    "urban_rural_designation": urban_rural,
+                    "incident_time_of_day": time_of_day,
+                    # Policy-driven metadata: Objective Stability Measures
+                    "residential_moves_count": moves_count,
+                    "financial_volatility_index": volatility_index,
+                    "primary_language": primary_lang,
                 }
                 
                 # Add survey ratings only if they exist
